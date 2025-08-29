@@ -7,7 +7,7 @@
 # Follows governing principles: idempotent, single-command, managed permissions
 # =============================================================================
 
-set -e  # Exit on any error
+# Script continues on errors to ensure maximum package installation
 
 # Colors for output
 readonly RED='\033[0;31m'
@@ -101,8 +101,8 @@ install_homebrew_package() {
     if brew install $options "$formula" &> /dev/null; then
         print_success "$name installed successfully"
     else
-        print_error "Failed to install $name"
-        return 1
+        print_error "Failed to install $name (continuing with next package)"
+        # Don't return error code - continue with next package
     fi
 }
 
@@ -176,7 +176,7 @@ install_homebrew() {
     else
         print_error "Homebrew installation completed but 'brew' command is not accessible!"
         print_error "You may need to restart your terminal or manually run: eval \"\$(/opt/homebrew/bin/brew shellenv)\""
-        return 1
+        # Don't return error - let script continue
     fi
 }
 
@@ -335,7 +335,7 @@ main() {
         install_additional_packages
     else
         print_error "Homebrew is not available - skipping package installation"
-        return 1
+        # Don't return error - let script complete
     fi
     
     print_header "Development Environment Setup Complete"
