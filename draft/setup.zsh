@@ -271,7 +271,7 @@ install_additional_packages() {
     # Database Tools
     print_info "Installing database tools..."
     install_homebrew_package "DbSchema" "dbschema" "--cask"
-    install_homebrew_package "MySQL Workbench" "mysqlworkbench" "--cask"
+    # install_homebrew_package "MySQL Workbench" "mysqlworkbench" "--cask"
     install_homebrew_package "Studio 3T (MongoDB)" "studio-3t" "--cask"
     
     # Web Browsers
