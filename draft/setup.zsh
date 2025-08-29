@@ -330,33 +330,16 @@ main() {
     # 3. Essential Packages
     if command -v brew &> /dev/null; then
         install_essential_packages
+        
+        # 4. Additional Packages
+        install_additional_packages
     else
         print_error "Homebrew is not available - skipping package installation"
         return 1
     fi
     
-    # 4. Additional Packages (Optional)
-    print_header "Additional Packages"
-    print_info "Would you like to install additional development packages?"
-    print_info "This includes 47 additional tools and applications:"
-    print_info "• Development tools (Sublime Text, Cursor, Go, AWS CLI, etc.)"
-    print_info "• Creative tools (Adobe CC, ImageOptim, VLC, etc.)"
-    print_info "• Communication tools (Slack, Teams, WhatsApp, etc.)"
-    print_info "• Database tools (MySQL Workbench, MongoDB Studio, etc.)"
-    print_info "• And many more productivity tools"
-    echo
-    
-    # Ask user if they want to install additional packages
-    echo -n "Install additional packages? (y/N): "
-    read -r response
-    if [[ "$response" =~ ^[Yy]$ ]]; then
-        install_additional_packages
-    else
-        print_info "Skipping additional packages installation"
-    fi
-    
     print_header "Development Environment Setup Complete"
-    print_success "All selected packages have been successfully installed!"
+    print_success "All packages have been successfully installed!"
     print_info "Your macOS development environment is now ready to use."
 }
 
