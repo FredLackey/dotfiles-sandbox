@@ -97,12 +97,32 @@ install_homebrew() {
     print_step "Installing Homebrew..."
     print_info "This will require administrator privileges for some operations."
     
+    # Pre-create directories that Homebrew needs with proper permissions
+    print_info "Setting up Homebrew directories..."
+    
+    # Determine Homebrew prefix based on architecture
+    if [[ $(uname -m) == "arm64" ]]; then
+        HOMEBREW_PREFIX="/opt/homebrew"
+    else
+        HOMEBREW_PREFIX="/usr/local"
+    fi
+    
+    # Create directories and set permissions if they don't exist
+    if [[ ! -d "$HOMEBREW_PREFIX" ]]; then
+        print_info "Creating $HOMEBREW_PREFIX directory (requires sudo)..."
+        sudo mkdir -p "$HOMEBREW_PREFIX"
+        sudo chown -R $(whoami):admin "$HOMEBREW_PREFIX"
+    fi
+    
     # Download and run Homebrew installer
-    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+    print_info "Running Homebrew installer..."
+    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" < /dev/null
     
     # Add Homebrew to PATH for Apple Silicon Macs
     if [[ $(uname -m) == "arm64" ]]; then
-        echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.zprofile
+        if ! grep -q 'eval "$(/opt/homebrew/bin/brew shellenv)"' ~/.zprofile 2>/dev/null; then
+            echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.zprofile
+        fi
         eval "$(/opt/homebrew/bin/brew shellenv)"
     fi
     
