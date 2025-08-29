@@ -22,7 +22,6 @@ This repository represents a new dotfiles approach designed for simplicity and e
 > ⚠️ **Development Notice**: This is currently in active development. The single-command setup is being refined.
 
 ```zsh
-# Coming soon - single command setup
 curl -fsSL https://raw.githubusercontent.com/fredlackey/dotfiles-sandbox/main/draft/setup.zsh | zsh
 ```
 
