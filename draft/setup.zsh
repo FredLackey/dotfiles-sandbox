@@ -56,13 +56,7 @@ check_xcode_cli_tools() {
     fi
 }
 
-check_xcode_ide() {
-    if [[ -d "/Applications/Xcode.app" ]]; then
-        return 0  # Already installed
-    else
-        return 1  # Not installed
-    fi
-}
+
 
 check_homebrew() {
     if command -v brew &> /dev/null; then
@@ -83,37 +77,21 @@ install_xcode_cli_tools() {
     xcode-select --install 2>/dev/null || true
     
     print_info "Please complete the Xcode Command Line Tools installation in the dialog that appeared."
-    print_info "Waiting for installation to complete..."
+    print_info "Waiting for installation to complete (checking silently every 10 seconds)..."
     
-    # Wait for installation to complete
+    # Wait for installation to complete silently
+    local dots=""
     while ! check_xcode_cli_tools; do
-        sleep 5
-        print_info "Still waiting for Xcode Command Line Tools installation..."
+        sleep 10
+        dots="${dots}."
+        printf "\r${BLUE}ℹ${NC} Still waiting${dots}"
     done
     
+    echo  # New line after the dots
     print_success "Xcode Command Line Tools installation completed!"
 }
 
-install_xcode_ide() {
-    print_step "Xcode IDE installation required..."
-    print_info "Opening Mac App Store to install Xcode..."
-    print_info "Please install Xcode from the App Store and then re-run this script."
-    
-    # Open Mac App Store to Xcode page
-    open "macappstore://apps.apple.com/app/xcode/id497799835"
-    
-    print_info "Waiting for Xcode installation..."
-    print_info "This script will continue checking every 30 seconds..."
-    print_info "Press Ctrl+C to exit and re-run this script after Xcode is installed."
-    
-    # Wait for Xcode to be installed
-    while ! check_xcode_ide; do
-        sleep 30
-        print_info "Still waiting for Xcode installation..."
-    done
-    
-    print_success "Xcode IDE installation detected!"
-}
+
 
 install_homebrew() {
     print_step "Installing Homebrew..."
@@ -140,7 +118,6 @@ main() {
     
     print_info "This script will install essential development prerequisites:"
     print_info "• Xcode Command Line Tools"
-    print_info "• Xcode IDE"
     print_info "• Homebrew Package Manager"
     echo
     
@@ -152,15 +129,7 @@ main() {
         install_xcode_cli_tools
     fi
     
-    # 2. Xcode IDE
-    print_header "Checking Xcode IDE"
-    if check_xcode_ide; then
-        print_success "Xcode IDE already installed"
-    else
-        install_xcode_ide
-    fi
-    
-    # 3. Homebrew
+    # 2. Homebrew
     print_header "Checking Homebrew"
     if check_homebrew; then
         print_success "Homebrew already installed"
