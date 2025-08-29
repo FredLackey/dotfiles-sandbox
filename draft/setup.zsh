@@ -249,7 +249,6 @@ install_additional_packages() {
     print_info "Installing communication tools..."
     install_homebrew_package "Messenger" "messenger" "--cask"
     install_homebrew_package "WhatsApp" "whatsapp" "--cask"
-    install_homebrew_package "Skype" "skype" "--cask"
     install_homebrew_package "Slack" "slack" "--cask"
     install_homebrew_package "Microsoft Office" "microsoft-office" "--cask"
     install_homebrew_package "Microsoft Teams" "microsoft-teams" "--cask"
