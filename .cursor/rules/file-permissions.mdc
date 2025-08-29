@@ -1,0 +1,30 @@
+---
+description: File permissions and execution context for ZSH-based dotfiles setup
+globs: ["draft/**/*", "*.zsh"]
+alwaysApply: true
+---
+
+# File Permissions Rule
+
+## Target Environment
+- **Primary Shell**: ZSH on macOS
+- **Working Directory**: All development work occurs in the `draft/` folder
+- **Execution Context**: Scripts designed to be executed from a ZSH terminal
+
+## File Permission Guidelines
+
+### ZSH Scripts
+- All `.zsh` files should have execute permissions (`chmod +x`)
+- The main `draft/setup.zsh` file must be executable from ZSH terminal
+- Scripts should include proper shebang: `#!/usr/bin/env zsh`
+
+### Learning from Legacy
+- Reference implementations in `alrra/` and `legacy/` folders for patterns
+- Adapt bash-based approaches to ZSH-native solutions
+- Maintain idempotent execution principles from existing implementations
+
+### Development Focus
+- All new development happens in `draft/` folder
+- Scripts must be ZSH-compatible (no bash-specific features)
+- Target macOS environment specifically
+- Ensure scripts can be executed directly from ZSH prompt

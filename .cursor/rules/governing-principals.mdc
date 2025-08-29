@@ -1,0 +1,40 @@
+---
+description: Core governing principles for the ZSH dotfiles setup system
+globs: ["draft/**/*", "*.zsh"]
+alwaysApply: true
+---
+
+# Governing Principles
+
+## Single Command Execution
+- **Primary Goal**: Everything must be executable via a single `setup.zsh` file from GitHub
+- **Direct Execution**: Users should be able to run: `curl -fsSL https://raw.githubusercontent.com/fredlackey/dotfiles-sandbox/main/draft/setup.zsh | zsh`
+- **No Manual Steps**: Zero manual intervention required beyond the initial command execution
+
+## Permission Management
+- **No Sudo Requirement**: Never require users to run the script with `sudo` or elevated permissions
+- **Prompt for Elevation**: When elevated permissions are needed:
+  - Prompt the user clearly explaining why elevation is needed
+  - Use `sudo` internally within the script for specific commands only
+  - Allow user to enter password when prompted by the system
+  - Continue execution after permission is granted
+
+## Installation Orchestration
+- **Prerequisite Handling**: Automatically detect and install prerequisites (e.g., Xcode Command Line Tools)
+- **Process Monitoring**: When launching installations:
+  - Start the installation process
+  - Monitor for completion before proceeding
+  - Handle installation failures gracefully
+  - Provide clear status updates to the user
+
+## Execution Principles
+- **Idempotent Operations**: Safe to run multiple times without side effects
+- **Error Handling**: Graceful failure with clear error messages
+- **Progress Feedback**: Keep users informed of current operations
+- **Atomic Operations**: Each step should complete fully or fail cleanly
+
+## Examples of Managed Operations
+- Xcode Command Line Tools installation and completion monitoring
+- Homebrew installation with permission prompts
+- Application installations requiring admin privileges
+- System preference modifications needing elevated access
