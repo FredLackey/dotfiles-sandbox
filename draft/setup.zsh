@@ -74,8 +74,17 @@ install_homebrew_package() {
     local name="$1"
     local formula="$2"
     local options="$3"
+    local tap="$4"
     
     print_step "Installing $name..."
+    
+    # Add tap if specified
+    if [[ -n "$tap" ]]; then
+        if ! brew tap | grep -q "$tap" &> /dev/null; then
+            print_info "Adding tap: $tap"
+            brew tap "$tap" &> /dev/null
+        fi
+    fi
     
     if [[ "$options" == "--cask" ]]; then
         if brew list --cask "$formula" &> /dev/null; then
@@ -207,6 +216,88 @@ install_essential_packages() {
     print_success "Essential packages installation completed!"
 }
 
+install_additional_packages() {
+    print_header "Installing Additional Development Packages"
+    
+    # Note: VS Code extensions from legacy project are handled separately
+    # See legacy/src/os/installs/macos/vscode.sh for the full list of extensions
+    
+    # Development & Languages
+    print_info "Installing additional development tools..."
+    install_homebrew_package "Sublime Text" "sublime-text" "--cask"
+    install_homebrew_package "Cursor (AI Code Editor)" "cursor" "--cask"
+    install_homebrew_package "Go Language" "go"
+    install_homebrew_package "AWS CLI" "awscli"
+    install_homebrew_package "LFTP" "lftp"
+    install_homebrew_package "Yarn" "yarn"
+    install_homebrew_package "Terraform Version Manager" "tfenv"
+    install_homebrew_package "Tailscale" "tailscale"
+    
+    # Media & Creative Tools
+    print_info "Installing media and creative tools..."
+    install_homebrew_package "ImageOptim" "imageoptim" "--cask"
+    install_homebrew_package "Pngyu" "pngyu" "--cask"
+    install_homebrew_package "AtomicParsley" "atomicparsley"
+    install_homebrew_package "VLC Media Player" "vlc" "--cask"
+    install_homebrew_package "Elmedia Player" "elmedia-player" "--cask"
+    install_homebrew_package "Spotify" "spotify" "--cask"
+    install_homebrew_package "Tidal" "tidal" "--cask"
+    install_homebrew_package "Adobe Creative Cloud" "adobe-creative-cloud" "--cask"
+    install_homebrew_package "Draw.io" "drawio" "--cask"
+    
+    # Communication & Collaboration
+    print_info "Installing communication tools..."
+    install_homebrew_package "Messenger" "messenger" "--cask"
+    install_homebrew_package "WhatsApp" "whatsapp" "--cask"
+    install_homebrew_package "Skype" "skype" "--cask"
+    install_homebrew_package "Slack" "slack" "--cask"
+    install_homebrew_package "Microsoft Office" "microsoft-office" "--cask"
+    install_homebrew_package "Microsoft Teams" "microsoft-teams" "--cask"
+    
+    # Productivity & Utilities
+    print_info "Installing productivity tools..."
+    install_homebrew_package "Snagit" "snagit" "--cask"
+    install_homebrew_package "Camtasia" "camtasia" "--cask"
+    install_homebrew_package "AppCleaner" "appcleaner" "--cask"
+    install_homebrew_package "Caffeine" "caffeine" "--cask"
+    install_homebrew_package "Keyboard Maestro" "keyboard-maestro" "--cask"
+    install_homebrew_package "Postman" "postman" "--cask"
+    install_homebrew_package "Beyond Compare" "beyond-compare" "--cask"
+    install_homebrew_package "Termius" "termius" "--cask"
+    install_homebrew_package "Zoom" "zoom" "--cask"
+    install_homebrew_package "yt-dlp" "yt-dlp"
+    install_homebrew_package "Bambu Studio" "bambu-studio" "--cask"
+    install_homebrew_package "balenaEtcher" "balenaetcher" "--cask"
+    
+    # Database Tools
+    print_info "Installing database tools..."
+    install_homebrew_package "DbSchema" "dbschema" "--cask"
+    install_homebrew_package "MySQL Workbench" "mysqlworkbench" "--cask"
+    install_homebrew_package "Studio 3T (MongoDB)" "studio-3t" "--cask"
+    
+    # Web Browsers
+    print_info "Installing additional browsers..."
+    install_homebrew_package "Google Chrome Canary" "google-chrome@canary" "--cask"
+    # Safari Technology Preview requires macOS 10.11.4+
+    if [[ $(sw_vers -productVersion | cut -d. -f1-2) > "10.11" ]]; then
+        install_homebrew_package "Safari Technology Preview" "safari-technology-preview" "--cask"
+    fi
+    
+    # AI & Security
+    print_info "Installing AI and security tools..."
+    install_homebrew_package "ChatGPT" "chatgpt" "--cask"
+    install_homebrew_package "Superwhisper" "superwhisper" "--cask"
+    install_homebrew_package "NordPass" "nordpass" "--cask"
+    
+    # Web Font Tools (with custom tap)
+    print_info "Installing web font tools..."
+    install_homebrew_package "SFNT2WOFF (Zopfli)" "sfnt2woff-zopfli" "" "bramstein/webfonttools"
+    install_homebrew_package "SFNT2WOFF" "sfnt2woff" "" "bramstein/webfonttools"
+    install_homebrew_package "WOFF2" "woff2" "" "bramstein/webfonttools"
+    
+    print_success "Additional packages installation completed!"
+}
+
 # =============================================================================
 # Main Installation Flow
 # =============================================================================
@@ -244,8 +335,28 @@ main() {
         return 1
     fi
     
+    # 4. Additional Packages (Optional)
+    print_header "Additional Packages"
+    print_info "Would you like to install additional development packages?"
+    print_info "This includes 47 additional tools and applications:"
+    print_info "• Development tools (Sublime Text, Cursor, Go, AWS CLI, etc.)"
+    print_info "• Creative tools (Adobe CC, ImageOptim, VLC, etc.)"
+    print_info "• Communication tools (Slack, Teams, WhatsApp, etc.)"
+    print_info "• Database tools (MySQL Workbench, MongoDB Studio, etc.)"
+    print_info "• And many more productivity tools"
+    echo
+    
+    # Ask user if they want to install additional packages
+    echo -n "Install additional packages? (y/N): "
+    read -r response
+    if [[ "$response" =~ ^[Yy]$ ]]; then
+        install_additional_packages
+    else
+        print_info "Skipping additional packages installation"
+    fi
+    
     print_header "Development Environment Setup Complete"
-    print_success "All prerequisites and essential packages have been successfully installed!"
+    print_success "All selected packages have been successfully installed!"
     print_info "Your macOS development environment is now ready to use."
 }
 
