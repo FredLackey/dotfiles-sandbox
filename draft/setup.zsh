@@ -118,15 +118,30 @@ install_homebrew() {
     print_info "Running Homebrew installer..."
     /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" < /dev/null
     
-    # Add Homebrew to PATH for Apple Silicon Macs
+    # Add Homebrew to PATH for future sessions
     if [[ $(uname -m) == "arm64" ]]; then
         if ! grep -q 'eval "$(/opt/homebrew/bin/brew shellenv)"' ~/.zprofile 2>/dev/null; then
             echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.zprofile
         fi
+        # Source the profile to make brew available in current session
         eval "$(/opt/homebrew/bin/brew shellenv)"
+    else
+        # Intel Mac - Homebrew should already be in PATH at /usr/local/bin
+        if ! grep -q '/usr/local/bin' ~/.zprofile 2>/dev/null; then
+            echo 'export PATH="/usr/local/bin:$PATH"' >> ~/.zprofile
+        fi
+        export PATH="/usr/local/bin:$PATH"
     fi
     
-    print_success "Homebrew installation completed!"
+    # Verify Homebrew is now accessible
+    if command -v brew &> /dev/null; then
+        print_success "Homebrew installation completed and verified!"
+        print_info "Homebrew version: $(brew --version | head -n1)"
+    else
+        print_error "Homebrew installation completed but 'brew' command is not accessible!"
+        print_error "You may need to restart your terminal or manually run: eval \"\$(/opt/homebrew/bin/brew shellenv)\""
+        return 1
+    fi
 }
 
 # =============================================================================
