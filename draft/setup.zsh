@@ -70,6 +70,33 @@ check_homebrew() {
 # Installation Functions
 # =============================================================================
 
+install_homebrew_package() {
+    local name="$1"
+    local formula="$2"
+    local options="$3"
+    
+    print_step "Installing $name..."
+    
+    if [[ "$options" == "--cask" ]]; then
+        if brew list --cask "$formula" &> /dev/null; then
+            print_success "$name already installed"
+            return 0
+        fi
+    else
+        if brew list "$formula" &> /dev/null; then
+            print_success "$name already installed"
+            return 0
+        fi
+    fi
+    
+    if brew install $options "$formula" &> /dev/null; then
+        print_success "$name installed successfully"
+    else
+        print_error "Failed to install $name"
+        return 1
+    fi
+}
+
 install_xcode_cli_tools() {
     print_step "Installing Xcode Command Line Tools..."
     
@@ -144,6 +171,42 @@ install_homebrew() {
     fi
 }
 
+install_essential_packages() {
+    print_header "Installing Essential Development Packages"
+    
+    # Development Tools
+    print_info "Installing development tools..."
+    install_homebrew_package "Git" "git"
+    install_homebrew_package "Vim" "vim"
+    install_homebrew_package "Bash" "bash"
+    install_homebrew_package "Bash Completion" "bash-completion@2"
+    install_homebrew_package "tmux" "tmux"
+    install_homebrew_package "tmux Pasteboard Support" "reattach-to-user-namespace"
+    
+    # Command Line Utilities  
+    print_info "Installing command line utilities..."
+    install_homebrew_package "ShellCheck" "shellcheck"
+    install_homebrew_package "jq (JSON processor)" "jq"
+    install_homebrew_package "yq (YAML processor)" "yq"
+    
+    # Security Tools
+    print_info "Installing security tools..."
+    install_homebrew_package "GPG" "gpg"
+    install_homebrew_package "GPG PIN Entry" "pinentry-mac"
+    
+    # Media Tools
+    print_info "Installing media tools..."
+    install_homebrew_package "FFmpeg" "ffmpeg"
+    
+    # Essential Applications (Casks)
+    print_info "Installing essential applications..."
+    install_homebrew_package "Visual Studio Code" "visual-studio-code" "--cask"
+    install_homebrew_package "Google Chrome" "google-chrome" "--cask"
+    install_homebrew_package "Docker" "docker" "--cask"
+    
+    print_success "Essential packages installation completed!"
+}
+
 # =============================================================================
 # Main Installation Flow
 # =============================================================================
@@ -154,6 +217,7 @@ main() {
     print_info "This script will install essential development prerequisites:"
     print_info "• Xcode Command Line Tools"
     print_info "• Homebrew Package Manager"
+    print_info "• Essential development packages and applications"
     echo
     
     # 1. Xcode Command Line Tools
@@ -172,9 +236,17 @@ main() {
         install_homebrew
     fi
     
-    print_header "Prerequisites Installation Complete"
-    print_success "All prerequisites have been successfully installed!"
-    print_info "You can now proceed with additional development environment setup."
+    # 3. Essential Packages
+    if command -v brew &> /dev/null; then
+        install_essential_packages
+    else
+        print_error "Homebrew is not available - skipping package installation"
+        return 1
+    fi
+    
+    print_header "Development Environment Setup Complete"
+    print_success "All prerequisites and essential packages have been successfully installed!"
+    print_info "Your macOS development environment is now ready to use."
 }
 
 # =============================================================================
