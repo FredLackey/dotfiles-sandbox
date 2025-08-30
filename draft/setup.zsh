@@ -571,6 +571,74 @@ configure_macos_preferences() {
         "defaults write -g AppleMeasurementUnits -string 'Centimeters'"
     
     # =============================================================================
+    # Dock Content Management
+    # =============================================================================
+    
+    print_info "Configuring Dock content..."
+    
+    configure_preference \
+        "Clear all default dock applications" \
+        "defaults write com.apple.dock persistent-apps -array && defaults write com.apple.dock persistent-others -array"
+    
+    # Add essential applications to dock
+    print_step "Adding essential applications to dock..."
+    
+    # Function to add application to dock
+    add_app_to_dock() {
+        local app_name="$1"
+        local app_path="$2"
+        
+        if [[ -d "$app_path" ]]; then
+            defaults write com.apple.dock persistent-apps -array-add \
+                "<dict><key>tile-data</key><dict><key>file-data</key><dict><key>_CFURLString</key><string>$app_path</string><key>_CFURLStringType</key><integer>0</integer></dict></dict><key>tile-type</key><string>file-tile</string></dict>" &> /dev/null
+            print_success "$app_name added to dock"
+        else
+            print_info "$app_name not found at $app_path - skipping"
+        fi
+    }
+    
+    # Add essential applications (only if they exist)
+    add_app_to_dock "Google Chrome" "/Applications/Google Chrome.app"
+    add_app_to_dock "Docker" "/Applications/Docker.app"
+    add_app_to_dock "Terminal" "/Applications/Utilities/Terminal.app"
+    
+    # Add additional applications if they exist
+    add_app_to_dock "Cursor" "/Applications/Cursor.app"
+    add_app_to_dock "Slack" "/Applications/Slack.app"
+    
+    # Add useful folders to dock
+    print_step "Adding useful folders to dock..."
+    
+    # Function to add folder to dock
+    add_folder_to_dock() {
+        local folder_name="$1"
+        local folder_path="$2"
+        local display_as="${3:-1}"  # 1=folder, 2=stack
+        local view_as="${4:-1}"     # 1=automatic, 2=fan, 3=grid, 4=list
+        
+        if [[ -d "$folder_path" ]]; then
+            defaults write com.apple.dock persistent-others -array-add \
+                "<dict><key>tile-data</key><dict><key>arrangement</key><integer>1</integer><key>displayas</key><integer>$display_as</integer><key>file-data</key><dict><key>_CFURLString</key><string>$folder_path</string><key>_CFURLStringType</key><integer>0</integer></dict><key>file-label</key><string>$folder_name</string><key>file-type</key><integer>2</integer><key>showas</key><integer>$view_as</integer></dict><key>tile-type</key><string>directory-tile</string></dict>" &> /dev/null
+            print_success "$folder_name folder added to dock"
+        else
+            print_info "$folder_name folder not found at $folder_path - skipping"
+        fi
+    }
+    
+    # Add Downloads folder
+    add_folder_to_dock "Downloads" "$HOME/Downloads" 1 1
+    
+    # Add Applications folder
+    add_folder_to_dock "Applications" "/Applications" 1 1
+    
+    # Add Trash
+    defaults write com.apple.dock persistent-others -array-add \
+        "<dict><key>tile-data</key><dict></dict><key>tile-type</key><string>trash-tile</string></dict>" &> /dev/null
+    print_success "Trash added to dock"
+    
+    print_success "Dock content management completed!"
+    
+    # =============================================================================
     # Restart affected applications
     # =============================================================================
     
