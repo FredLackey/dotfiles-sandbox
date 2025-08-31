@@ -77,6 +77,7 @@ install_essentials() {
         "bash-completion"
         "command-not-found"
         "xclip"
+        "neovim"
     )
     
     for package in "${packages[@]}"; do

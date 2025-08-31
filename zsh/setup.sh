@@ -217,15 +217,21 @@ typeset -g POWERLEVEL9K_RIGHT_PROMPT_ELEMENTS=(
   time                  # current time
 )
 
-# Prompt colors
-typeset -g POWERLEVEL9K_DIR_FOREGROUND=blue
-typeset -g POWERLEVEL9K_VCS_FOREGROUND=green
-typeset -g POWERLEVEL9K_TIME_FOREGROUND=cyan
+# Darcula-inspired colors
+typeset -g POWERLEVEL9K_DIR_FOREGROUND=39          # Bright blue (similar to Darcula folders)
+typeset -g POWERLEVEL9K_VCS_FOREGROUND=148         # Yellow-green (Darcula VCS color)
+typeset -g POWERLEVEL9K_TIME_FOREGROUND=244        # Gray (Darcula comment color)
+typeset -g POWERLEVEL9K_STATUS_OK_FOREGROUND=148   # Green for success
+typeset -g POWERLEVEL9K_STATUS_ERROR_FOREGROUND=203 # Pink/red for errors
 
-# Prompt symbol
-typeset -g POWERLEVEL9K_PROMPT_CHAR_OK_{VIINS,VICMD,VIVIS}_FOREGROUND=green
-typeset -g POWERLEVEL9K_PROMPT_CHAR_ERROR_{VIINS,VICMD,VIVIS}_FOREGROUND=red
+# Prompt symbol (Darcula-style)
+typeset -g POWERLEVEL9K_PROMPT_CHAR_OK_{VIINS,VICMD,VIVIS}_FOREGROUND=148    # Green
+typeset -g POWERLEVEL9K_PROMPT_CHAR_ERROR_{VIINS,VICMD,VIVIS}_FOREGROUND=203 # Pink/red
 typeset -g POWERLEVEL9K_PROMPT_CHAR_{OK,ERROR}_VIINS_CONTENT_EXPANSION='❯'
+
+# Additional Darcula-like colors
+typeset -g POWERLEVEL9K_COMMAND_EXECUTION_TIME_FOREGROUND=180  # Tan/beige
+typeset -g POWERLEVEL9K_BACKGROUND_JOBS_FOREGROUND=178         # Orange
 
 # Add newline before each prompt
 typeset -g POWERLEVEL9K_PROMPT_ADD_NEWLINE=true
@@ -233,8 +239,23 @@ typeset -g POWERLEVEL9K_PROMPT_ADD_NEWLINE=true
 # Show command execution time if >= 3 seconds
 typeset -g POWERLEVEL9K_COMMAND_EXECUTION_TIME_THRESHOLD=3
 
-# Git settings
+# Git settings (Darcula-style)
 typeset -g POWERLEVEL9K_VCS_BACKENDS=(git)
+typeset -g POWERLEVEL9K_VCS_CLEAN_FOREGROUND=148           # Green for clean repo
+typeset -g POWERLEVEL9K_VCS_UNTRACKED_FOREGROUND=178       # Orange for untracked
+typeset -g POWERLEVEL9K_VCS_MODIFIED_FOREGROUND=220        # Yellow for modified
+
+# Directory styling (Darcula-like)
+typeset -g POWERLEVEL9K_DIR_SHORTENED_FOREGROUND=39        # Bright blue
+typeset -g POWERLEVEL9K_DIR_ANCHOR_FOREGROUND=39           # Bright blue
+typeset -g POWERLEVEL9K_SHORTEN_STRATEGY=truncate_to_last  # Show only last directory
+typeset -g POWERLEVEL9K_SHORTEN_DIR_LENGTH=1               # Shorten long paths
+
+# Make it look more like a modern dark theme
+typeset -g POWERLEVEL9K_LEFT_SEGMENT_SEPARATOR=''          # Clean separators
+typeset -g POWERLEVEL9K_RIGHT_SEGMENT_SEPARATOR=''         # Clean separators
+typeset -g POWERLEVEL9K_LEFT_SUBSEGMENT_SEPARATOR=' '      # Space separator
+typeset -g POWERLEVEL9K_RIGHT_SUBSEGMENT_SEPARATOR=' '     # Space separator
 
 # Instant prompt mode
 typeset -g POWERLEVEL9K_INSTANT_PROMPT=quiet
