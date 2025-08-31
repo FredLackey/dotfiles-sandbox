@@ -114,19 +114,15 @@ install_dev_tools() {
         log_info "Python development tools are already installed"
     fi
     
-    # Docker (optional)
+    # Docker
     if ! command -v docker >/dev/null 2>&1; then
-        read -p "Would you like to install Docker? (y/N): " -n 1 -r
-        echo
-        if [[ $REPLY =~ ^[Yy]$ ]]; then
-            log_info "Installing Docker..."
-            curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
-            echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-            sudo apt update
-            sudo apt install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
-            sudo usermod -aG docker "$USER"
-            log_success "Docker installed. Please log out and back in to use Docker without sudo."
-        fi
+        log_info "Installing Docker..."
+        curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+        echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+        sudo apt update
+        sudo apt install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
+        sudo usermod -aG docker "$USER"
+        log_success "Docker installed. Please log out and back in to use Docker without sudo."
     else
         log_info "Docker is already installed"
     fi

@@ -9,6 +9,7 @@ This repository provides a comprehensive dotfiles setup that:
 - **Cross-Platform Support**: Works seamlessly on both Ubuntu and macOS
 - **Shell Flexibility**: Prioritizes ZSH but gracefully falls back to Bash when ZSH is not available or permitted
 - **Modular Design**: Organized structure with separate configurations for each shell while sharing common utilities
+- **Fully Automated**: Runs completely unattended with no user prompts required
 - **Idempotent Installation**: Each setup step verifies existing configurations before making changes
 - **User-Friendly**: Simple installation process with clear documentation
 
@@ -33,12 +34,13 @@ This repository provides a comprehensive dotfiles setup that:
    ./setup.sh
    ```
 
-The setup script will:
+The setup script will automatically:
 - Detect your operating system (Ubuntu/macOS)
-- Check for ZSH availability and install if needed
-- Configure your preferred shell environment
+- Install ZSH if not available (falls back to Bash if installation fails)
+- Configure your shell environment with enhanced features
 - Set up dotfiles and configurations
-- Install necessary tools and dependencies
+- Install essential development tools and packages
+- Apply platform-specific optimizations
 
 ## Directory Structure
 

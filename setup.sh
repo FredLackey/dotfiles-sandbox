@@ -175,20 +175,15 @@ main() {
             ;;
         "not_installed")
             log_warning "ZSH is not installed"
-            read -p "Would you like to install ZSH? (y/N): " -n 1 -r
-            echo
-            if [[ $REPLY =~ ^[Yy]$ ]]; then
-                if install_zsh "$platform"; then
-                    log_success "ZSH installed successfully"
-                    if [[ -f "$DOTFILES_DIR/zsh/setup.sh" ]]; then
-                        bash "$DOTFILES_DIR/zsh/setup.sh" "$platform"
-                        set_zsh_as_default
-                    fi
-                else
-                    log_error "Failed to install ZSH, falling back to Bash"
-                    zsh_status="fallback_to_bash"
+            log_info "Installing ZSH automatically..."
+            if install_zsh "$platform"; then
+                log_success "ZSH installed successfully"
+                if [[ -f "$DOTFILES_DIR/zsh/setup.sh" ]]; then
+                    bash "$DOTFILES_DIR/zsh/setup.sh" "$platform"
+                    set_zsh_as_default
                 fi
             else
+                log_error "Failed to install ZSH, falling back to Bash"
                 zsh_status="fallback_to_bash"
             fi
             ;;

@@ -116,12 +116,8 @@ install_dev_tools() {
     
     for package in "${dev_packages[@]}"; do
         if ! brew list "$package" &>/dev/null; then
-            read -p "Would you like to install $package? (y/N): " -n 1 -r
-            echo
-            if [[ $REPLY =~ ^[Yy]$ ]]; then
-                log_info "Installing $package..."
-                brew install "$package"
-            fi
+            log_info "Installing $package..."
+            brew install "$package"
         else
             log_info "$package is already installed"
         fi
@@ -146,12 +142,8 @@ install_gui_apps() {
     
     for app in "${cask_apps[@]}"; do
         if ! brew list --cask "$app" &>/dev/null; then
-            read -p "Would you like to install $app? (y/N): " -n 1 -r
-            echo
-            if [[ $REPLY =~ ^[Yy]$ ]]; then
-                log_info "Installing $app..."
-                brew install --cask "$app"
-            fi
+            log_info "Installing $app..."
+            brew install --cask "$app"
         else
             log_info "$app is already installed"
         fi

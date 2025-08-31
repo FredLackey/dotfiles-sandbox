@@ -360,14 +360,9 @@ pskill() {
         echo "Found processes:"
         ps -p "$pids" -o pid,ppid,cmd
         echo
-        read -p "Kill these processes? (y/N): " -n 1 -r
-        echo
-        if [[ $REPLY =~ ^[Yy]$ ]]; then
-            kill $pids
-            echo "Processes killed"
-        else
-            echo "Cancelled"
-        fi
+        echo "Killing processes automatically..."
+        kill $pids
+        echo "Processes killed"
     else
         echo "No processes found matching '$1'"
     fi
