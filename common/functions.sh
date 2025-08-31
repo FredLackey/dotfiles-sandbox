@@ -3,6 +3,53 @@
 # Common Functions
 # Shared functions for both ZSH and Bash
 
+# Test terminal color support
+test_colors() {
+    echo "Testing terminal color support..."
+    echo
+    
+    # Basic color test
+    for i in {0..7}; do
+        echo -en "\033[3${i}m■\033[0m"
+    done
+    echo " <- Basic colors"
+    
+    # Bright color test  
+    for i in {0..7}; do
+        echo -en "\033[9${i}m■\033[0m"
+    done
+    echo " <- Bright colors"
+    
+    # 256 color test (sample)
+    echo
+    echo "256 color sample:"
+    for i in {16..51}; do
+        printf "\033[48;5;%dm  \033[0m" "$i"
+        ((i % 6 == 3)) && echo
+    done
+    echo
+    
+    # RGB color test
+    echo "RGB color support:"
+    echo -e "\033[38;2;255;100;0mRGB Orange\033[0m"
+    echo -e "\033[38;2;0;255;255mRGB Cyan\033[0m"
+    echo -e "\033[38;2;255;0;255mRGB Magenta\033[0m"
+    echo
+    
+    # Environment info
+    echo "Terminal info:"
+    echo "TERM: $TERM"
+    echo "COLORTERM: $COLORTERM"
+    echo "Colors supported: $(tput colors 2>/dev/null || echo 'unknown')"
+}
+
+# Force color output in pipes
+force_color() {
+    export FORCE_COLOR=1
+    export CLICOLOR_FORCE=1
+    echo "Color output forced for pipes and non-TTY"
+}
+
 # Create directory and cd into it
 mkcd() {
     if [ $# -ne 1 ]; then

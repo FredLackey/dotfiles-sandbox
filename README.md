@@ -41,6 +41,7 @@ The setup script will automatically:
 - Set up dotfiles and configurations
 - Install essential development tools and packages
 - Apply platform-specific optimizations
+- **Configure terminal themes** (Darcula-style dark theme for Terminal.app and iTerm2)
 
 ## Directory Structure
 

@@ -11,14 +11,39 @@ alias .....='cd ../../../..'
 alias ~='cd ~'
 alias -- -='cd -'
 
-# List directory contents
-alias ls='ls --color=auto'
-alias ll='ls -alF'
-alias la='ls -A'
-alias l='ls -CF'
-alias lh='ls -lah'
-alias lt='ls -ltr'
-alias lS='ls -lSr'
+# List directory contents - Force color output
+if command -v gls >/dev/null 2>&1; then
+    # Use GNU ls if available (better color support)
+    alias ls='gls --color=always'
+    alias ll='gls -alF --color=always'
+    alias la='gls -A --color=always'
+    alias l='gls -CF --color=always'
+    alias lh='gls -lah --color=always'
+    alias lt='gls -ltr --color=always'
+    alias lS='gls -lSr --color=always'
+else
+    # Fallback to system ls
+    case "$(uname -s)" in
+        Darwin*)
+            alias ls='ls -G'
+            alias ll='ls -alFG'
+            alias la='ls -AG'
+            alias l='ls -CFG'
+            alias lh='ls -lahG'
+            alias lt='ls -ltrG'
+            alias lS='ls -lSrG'
+            ;;
+        *)
+            alias ls='ls --color=always'
+            alias ll='ls -alF --color=always'
+            alias la='ls -A --color=always'
+            alias l='ls -CF --color=always'
+            alias lh='ls -lah --color=always'
+            alias lt='ls -ltr --color=always'
+            alias lS='ls -lSr --color=always'
+            ;;
+    esac
+fi
 
 # Directory operations
 alias md='mkdir -p'
@@ -30,10 +55,11 @@ alias mv='mv -i'
 alias rm='rm -i'
 alias ln='ln -i'
 
-# Grep with color
-alias grep='grep --color=auto'
-alias fgrep='fgrep --color=auto'
-alias egrep='egrep --color=auto'
+# Grep with color - Force color output
+alias grep='grep --color=always'
+alias fgrep='fgrep --color=always'
+alias egrep='egrep --color=always'
+alias rg='rg --color=always'
 
 # Process management
 alias ps='ps auxf'
@@ -130,12 +156,7 @@ case "$(uname -s)" in
         alias hidefiles='defaults write com.apple.finder AppleShowAllFiles NO; killall Finder /System/Library/CoreServices/Finder.app'
         alias flushdns='sudo dscacheutil -flushcache; sudo killall -HUP mDNSResponder'
         
-        # Override ls for macOS
-        if command -v gls >/dev/null 2>&1; then
-            alias ls='gls --color=auto'
-        else
-            alias ls='ls -G'
-        fi
+        # macOS ls colors are handled above
         ;;
     Linux*)
         # Linux specific aliases
