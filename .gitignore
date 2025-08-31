@@ -1,0 +1,39 @@
+# Backup files created by setup scripts
+*.backup.*
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+
+# Temporary files
+tmp/
+temp/
+
+# Local customizations (user-specific files)
+*.local
+.env
+
+# Shell history files that might be created during testing
+.bash_history
+.zsh_history
+
+# Cache directories
+.cache/
+
+# Local git configuration that shouldn't be shared
+.git/config.local
