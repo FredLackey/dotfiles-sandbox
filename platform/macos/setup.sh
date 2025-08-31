@@ -76,7 +76,7 @@ install_essentials() {
         "ripgrep"
         "fd"
         "bat"
-        "exa"
+        "eza"
         "fzf"
         "gnu-sed"
         "gnu-tar"
@@ -246,13 +246,13 @@ if command -v ggrep >/dev/null 2>&1; then
     alias grep='ggrep --color=auto'
 fi
 
-# Use exa if available (better ls)
-if command -v exa >/dev/null 2>&1; then
-    alias ls='exa'
-    alias ll='exa -la'
-    alias la='exa -a'
-    alias lt='exa -T'
-    alias tree='exa -T'
+# Use eza if available (better ls)
+if command -v eza >/dev/null 2>&1; then
+    alias ls='eza'
+    alias ll='eza -la'
+    alias la='eza -a'
+    alias lt='eza -T'
+    alias tree='eza -T'
 fi
 
 # Use bat if available (better cat)
