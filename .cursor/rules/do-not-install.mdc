@@ -1,6 +1,38 @@
 ---
-description:
-globs:
+description: Development environment - no system modifications allowed
+globs: ["**/*"]
 alwaysApply: true
 ---
-**CRITICAL** DO NOT INSTALL ANYTHING ON THIS COMPUTER!  THIS REPO IS FOR USE ON A DIFFERENT SYSTEM!
+
+# 🚨 CRITICAL DEVELOPMENT RULE
+
+## DO NOT MODIFY ANYTHING ON THIS COMPUTER!
+
+This repository is for **script development only**. All actual deployment and configuration will happen on different target systems.
+
+## What This Means
+
+- **NO package installations** (brew, apt, npm, etc.)
+- **NO system modifications** (preferences, configurations, settings)
+- **NO file system changes** outside this repository
+- **NO downloads** of external tools or binaries
+- **NO execution** of installation or configuration commands
+
+## Development Workflow
+
+1. **Write scripts** that will install/configure on target systems
+2. **Code review** and validate script logic through reading
+3. **Document** what scripts will do when deployed
+4. **Deploy** to actual target systems separately
+
+## Script Validation
+
+Since we cannot execute installation commands locally:
+- **Read and analyze** script logic carefully
+- **Use conditional flags** (`--dry-run`, `--test-mode`) in script design
+- **Mock or simulate** commands in script comments
+- **Test on actual target systems** during deployment phase
+
+## Remember
+
+This computer is a **development workstation only** - the scripts we write here will run on completely different machines.

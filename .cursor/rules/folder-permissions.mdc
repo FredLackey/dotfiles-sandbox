@@ -1,0 +1,41 @@
+---
+description: Reference folders are read-only examples with different practices
+globs: ["_*/**"]
+alwaysApply: true
+---
+
+# Reference Folder Guidelines
+
+## Read-Only Reference Materials
+
+The following folders contain **reference materials only**:
+
+- **`/_legacy/`** - Current production dotfiles (working examples)
+- **`/_archive/`** - Previous auto-generated attempt (bloated, undocumented)  
+- **`/_examples/`** - Other developers' dotfiles (learning techniques)
+
+## ⚠️ CRITICAL WARNINGS
+
+- **DO NOT trust** any folder starting with underscore `_`
+- **DO NOT copy** code directly from reference folders
+- **DO NOT assume** they follow current project practices
+- **DO NOT execute** scripts from reference folders
+
+## Proper Usage
+
+✅ **Learn from** patterns and techniques
+✅ **Read** to understand different approaches  
+✅ **Analyze** for inspiration and ideas
+✅ **Reference** when documenting decisions
+
+❌ **Copy/paste** without understanding
+❌ **Execute** scripts directly
+❌ **Trust** that they work correctly
+❌ **Assume** they follow project standards
+
+## Why These Restrictions?
+
+- Reference folders may have **different design goals**
+- Code may be **untested or broken**
+- Practices may **conflict with current architecture**
+- Auto-generated code lacks **documentation and understanding**

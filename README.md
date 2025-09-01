@@ -1,135 +1,110 @@
-# Dotfiles Sandbox
+# Dotfiles
 
-A cross-platform dotfiles configuration system for Ubuntu and macOS, designed to provide a consistent development environment with ZSH as the primary shell and Bash as a fallback option.
+A fresh approach to dotfiles configuration for macOS and Ubuntu systems.
 
-## Purpose
+## Overview
 
-This repository provides a comprehensive dotfiles setup that:
+This repository represents a new dotfiles effort designed to replace the current dotfiles setup with a more thoughtful, documented, and maintainable approach.
 
-- **Cross-Platform Support**: Works seamlessly on both Ubuntu and macOS
-- **Shell Flexibility**: Prioritizes ZSH but gracefully falls back to Bash when ZSH is not available or permitted
-- **Modular Design**: Organized structure with separate configurations for each shell while sharing common utilities
-- **Fully Automated**: Runs completely unattended with no user prompts required
-- **Idempotent Installation**: Each setup step verifies existing configurations before making changes
-- **User-Friendly**: Simple installation process with clear documentation
+### Architecture
 
-## Installation
+- **Primary Shell**: ZShell (zsh) for interactive terminal sessions
+- **Scripting**: Bash for all automation and setup scripts
+- **Target Platforms**: macOS (primary focus) and Ubuntu (future)
 
-### Prerequisites
+## Project Structure
 
-- Git installed on your system
-- Internet connection for downloading dependencies
+### Active Development
 
-### Quick Start
+- `src/` - Main source code and configuration files
+- `scripts/` - Utility and setup scripts
 
-1. **Clone to your home directory**:
-   ```bash
-   cd ~
-   git clone <repository-url> .files
-   cd .files
-   ```
+### Reference Materials
 
-2. **Run the setup script**:
-   ```bash
-   ./setup.sh
-   ```
+The following directories contain reference materials that can be learned from but follow different practices than this project:
 
-The setup script will automatically:
-- Detect your operating system (Ubuntu/macOS)
-- Install ZSH if not available (falls back to Bash if installation fails)
-- Configure your shell environment with enhanced features
-- Set up dotfiles and configurations
-- Install essential development tools and packages
-- Apply platform-specific optimizations
-- **Configure terminal themes** (Darcula-style dark theme for Terminal.app and iTerm2)
+- **`_legacy/`** - Current production dotfiles stored as examples
+- **`_archive/`** - Previous attempt at dotfiles automation (auto-generated, undocumented)
+- **`_examples/`** - Collection of other developers' dotfiles for learning techniques
 
-## Directory Structure
+> ⚠️ **Important**: Reference directories (`_*`) contain examples only and should not be trusted for direct implementation. They may not follow current best practices or project goals.
 
-```
-.files/
-├── README.md              # This file
-├── setup.sh              # Main installation script
-├── zsh/                  # ZSH-specific configurations
-│   ├── setup.sh          # ZSH setup script
-│   ├── .zshrc            # ZSH configuration
-│   └── plugins/          # ZSH plugins and themes
-├── bash/                 # Bash-specific configurations
-│   ├── setup.sh          # Bash setup script
-│   ├── .bashrc           # Bash configuration
-│   └── .bash_profile     # Bash profile
-├── common/               # Shared configurations and utilities
-│   ├── aliases.sh        # Common aliases
-│   ├── functions.sh      # Shared functions
-│   ├── exports.sh        # Environment variables
-│   └── git/              # Git configurations
-└── platform/             # Platform-specific configurations
-    ├── ubuntu/           # Ubuntu-specific settings
-    └── macos/            # macOS-specific settings
+## Development Philosophy
+
+### Current Focus
+- **macOS only** during initial development cycle
+- Ubuntu support planned for future iterations
+- Clean, documented, and maintainable code
+- Manual review and understanding of all configurations
+
+### Design Principles
+- Each script must be idempotent (can be run multiple times safely)
+- Comprehensive documentation for all configurations
+- Small, focused files (< 200 lines)
+- No installation of packages during development (this repo is for deployment elsewhere)
+
+### Future Considerations
+- Separate configuration sets for bash and zsh environments
+- Support for systems without zsh availability
+- Modular design for easy customization
+
+## Deployment Model
+
+This repository is designed to be cloned directly onto the target machine and executed locally:
+
+```bash
+git clone <repository-url> ~/dotfiles
+cd ~/dotfiles
+# Execute setup scripts (to be implemented)
 ```
 
-## Features
+### Update Workflow
 
-### Shell Management
-- **Primary**: ZSH with oh-my-zsh framework
-- **Fallback**: Bash with enhanced configuration
-- **Smart Detection**: Automatically detects available shells
+The intended workflow supports continuous improvement through regular updates:
 
-### Cross-Platform Compatibility
-- **Ubuntu**: Optimized for Ubuntu environments
-- **macOS**: Native macOS integration with Homebrew support
-- **Shared**: Common configurations work across both platforms
+1. **Update**: `git pull` to get the latest changes
+2. **Execute**: Run setup scripts to apply new configurations
+3. **Repeat**: This process can be repeated unlimited times safely
 
-### Modular Configuration
-- **Separated Concerns**: Shell-specific vs shared configurations
-- **Easy Maintenance**: Clear organization for updates and customization
-- **Extensible**: Simple to add new tools and configurations
+## Critical Design Requirement: Idempotency
 
-## Usage
+**All scripts and configurations must be idempotent** - capable of being executed multiple times without causing problems or inconsistencies.
 
-After installation, your shell environment will be configured with:
+### Implementation Guidelines
 
-- Enhanced prompt with git integration
-- Useful aliases and functions
-- Development tools and utilities
-- Consistent behavior across platforms
+- **Never blindly append** to configuration files
+- **Always check** if a setting already exists before adding it
+- **Verify current state** before making changes
+- **Use conditional logic** to determine if action is needed
+- **Validate** that multiple executions produce the same result
 
-### Customization
+### Examples of Idempotent Patterns
 
-To customize your setup:
+```bash
+# BAD: Blindly appends (creates duplicates)
+echo "export PATH=$PATH:/new/path" >> ~/.bashrc
 
-1. Edit files in the appropriate directory (`zsh/`, `bash/`, or `common/`)
-2. Re-run the setup script: `~/.files/setup.sh`
-3. Or source your shell configuration: `source ~/.zshrc` or `source ~/.bashrc`
+# GOOD: Check if already present
+if ! grep -q "/new/path" ~/.bashrc; then
+    echo "export PATH=$PATH:/new/path" >> ~/.bashrc
+fi
 
-## Development
+# GOOD: Use tools that handle duplicates
+# (Implementation details to be added as project develops)
+```
 
-This project follows these principles:
+## Getting Started
 
-- **Idempotent**: Scripts can be run multiple times safely
-- **Non-destructive**: Existing configurations are backed up
-- **Modular**: Easy to enable/disable specific features
-- **Well-documented**: Clear comments and documentation
+This project is currently in active development. Setup scripts and documentation will be added as features are implemented.
 
 ## Contributing
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Test on both Ubuntu and macOS if possible
-5. Submit a pull request
+When working on this project:
+- Do not create files unless explicitly requested
+- Keep all scripts idempotent
+- Document the purpose and behavior of all configurations
+- Test on target systems before committing
 
-## License
+---
 
-This project is open source and available under the [MIT License](LICENSE).
-
-## Troubleshooting
-
-### Common Issues
-
-**ZSH not installing**: Check if you have sudo privileges and internet connectivity.
-
-**Configurations not loading**: Ensure the setup script completed successfully and restart your terminal.
-
-**Platform-specific issues**: Check the `platform/` directory for OS-specific configurations.
-
-For more help, please open an issue in the repository.
+*This dotfiles setup prioritizes understanding and maintainability over convenience.*

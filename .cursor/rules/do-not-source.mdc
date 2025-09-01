@@ -1,0 +1,35 @@
+---
+description: All scripts must be executable with main() functions, never sourced
+globs: ["**/*.sh"]
+alwaysApply: true
+---
+
+# Script Execution Pattern
+
+## CRITICAL REQUIREMENTS
+
+- **EVERY script file must use a main() function and be called directly**
+- **NEVER source any script file within the repository**
+
+## Implementation Pattern
+
+```bash
+#!/usr/bin/env bash
+
+# Script functions here...
+
+main() {
+    # All script logic goes here
+    echo "Executing script logic..."
+}
+
+# Execute main function when script is run directly
+main "$@"
+```
+
+## Why This Pattern?
+
+- Ensures scripts are self-contained and testable
+- Prevents namespace pollution from sourcing
+- Makes scripts idempotent and predictable
+- Allows scripts to be executed repeatedly safely
