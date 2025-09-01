@@ -16,8 +16,43 @@ This repository represents a new dotfiles effort designed to replace the current
 
 ### Active Development
 
-- `src/` - Main source code and configuration files
-- `scripts/` - Utility and setup scripts
+- **`src/`** - Main source code and configuration files for dotfiles installation
+- **`scripts/`** - Repository-level utilities (git operations, documentation updates, etc.)
+
+#### Source Organization (`src/`)
+
+The source directory is organized by platform specificity:
+
+- **`src/common/`** - Shared configurations that work across platforms
+  - Shell configurations (bash, zsh) targeting common platform features
+  - Universal aliases, functions, and exports
+  - Cross-platform compatible settings
+
+- **`src/macos/`** - macOS-specific implementations
+  - Homebrew package installations
+  - Xcode command line utilities setup
+  - macOS system preferences and defaults
+  - Platform-specific optimizations
+
+- **`src/ubuntu/`** - Ubuntu-specific implementations  
+  - APT package management
+  - GNOME desktop environment configurations
+  - Ubuntu-specific system utilities
+  - Distribution-specific settings
+
+#### Platform Strategy
+
+The common folder targets shared functionality, though bash and zsh version compatibility between macOS and Ubuntu may require platform-specific implementations where universal approaches aren't feasible.
+
+#### Repository Scripts (`scripts/`)
+
+The scripts folder contains repository maintenance utilities:
+- Git workflow automation
+- Documentation generation
+- Code quality checks
+- Repository maintenance tasks
+
+**Note**: Repository scripts are distinct from installation scripts and do not perform any system configuration.
 
 ### Reference Materials
 
