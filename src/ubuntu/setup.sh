@@ -212,11 +212,11 @@ initialize_git_repo() {
     
     cd "$DOTFILES_DIR"
     
-    # Check if already a git repository
-    if [ -d ".git" ]; then
+    # Check if already a git repository (using same method as alrra)
+    if git rev-parse &> /dev/null; then
         print_success "Git repository (already initialized)"
         
-        # Set up remote if not already configured
+        # Check if remote origin exists
         if ! git remote | grep -q "origin"; then
             execute \
                 "git remote add origin 'https://github.com/fredlackey/dotfiles-sandbox.git'" \
@@ -225,14 +225,10 @@ initialize_git_repo() {
             print_success "Git remote origin (already configured)"
         fi
     else
-        # Initialize new repository
+        # Simple initialization like alrra project
         execute \
-            "git init && \
-             git remote add origin 'https://github.com/fredlackey/dotfiles-sandbox.git' && \
-             git fetch origin && \
-             git reset --hard origin/main && \
-             git branch --set-upstream-to=origin/main main" \
-            "Initializing Git repository"
+            "git init && git remote add origin 'https://github.com/fredlackey/dotfiles-sandbox.git'" \
+            "Initialize Git repository"
     fi
     
     cd - >/dev/null
