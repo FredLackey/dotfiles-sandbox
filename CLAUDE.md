@@ -22,6 +22,15 @@ This is a dotfiles configuration repository for macOS and Ubuntu systems. The re
 
 All scripts are developed here and executed on different target systems.
 
+### Write for Junior Developers
+- **Every script and document must be written so a junior developer can understand it**
+- **Use clear, descriptive variable names** (avoid cryptic abbreviations)
+- **Add explanatory comments** for non-obvious logic or system commands
+- **Break complex operations** into smaller, understandable steps
+- **Document the "why"** not just the "what" for design decisions
+- **Avoid clever one-liners** in favor of readable, maintainable code
+- **Provide examples** where concepts might be unclear
+
 ## Architecture and Structure
 
 ### Directory Organization
