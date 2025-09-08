@@ -76,11 +76,22 @@ check_command() {
 
 # Ask for sudo password upfront and keep it alive
 ask_for_sudo() {
-    # Ask for the administrator password upfront
+    # Check if sudo requires a password
+    if sudo -n true 2>/dev/null; then
+        # Passwordless sudo detected (common on EC2)
+        print_success "Passwordless sudo detected"
+        return 0
+    fi
+    
+    # Password is required
     print_info "Administrator privileges will be required..."
     
     # Prompt for password
-    sudo -v
+    if ! sudo -v; then
+        print_error "Failed to authenticate with sudo"
+        print_info "If sudo is not needed, press Ctrl+C to skip"
+        exit 1
+    fi
     
     # Keep sudo alive until the script finishes
     while true; do
@@ -306,7 +317,7 @@ main() {
     # Verify we're on Ubuntu (not WSL)
     verify_ubuntu
     
-    # Ask for sudo password upfront
+    # Ask for sudo password upfront (or detect passwordless sudo)
     ask_for_sudo
     
     # Update package lists
