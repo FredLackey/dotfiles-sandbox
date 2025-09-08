@@ -25,7 +25,11 @@ Future platforms (planned after initial three are complete):
 - **Scripting Language**: Bash for all automation and setup scripts
 - **Shell Philosophy**: Never install or upgrade shell interpreters - work with what's already available
 - **Development Focus**: Full-stack Node.js and Java development with appropriate tooling for each platform
-- **IDE Strategy**: Text-based editors (Vim/Neovim) as the primary IDE across ALL platforms, with supplementary GUI tools (VS Code) available on macOS for convenience
+- **Primary IDE**: NeoVim configured as a full-featured IDE for text-based development across ALL platforms
+  - Not using pre-configured distributions (LazyVim, AstroNvim, etc.)
+  - Custom NeoVim configuration built from scratch for our specific needs
+  - ZSH + NeoVim provides the core development experience
+- **Supplementary Tools**: GUI tools (VS Code) available on macOS for convenience when working in desktop environments
 
 ## Project Structure
 
@@ -57,7 +61,7 @@ The source directory is organized by platform specificity:
 - **`src/ubuntu/`** - Ubuntu-specific implementations  
   - APT package management
   - Development tools: Node.js (via NodeSource), npm, OpenJDK, Maven, Gradle
-  - Text-based IDEs: Vim/Neovim with IDE features, tmux for session management
+  - Text-based IDE: NeoVim with custom IDE configuration, tmux for session management
   - Build essentials and compilation tools
   - Docker and container runtime
   - Database tools and clients
@@ -127,7 +131,10 @@ The following directories contain reference materials that can be learned from b
 - **Three target environments**: Windows WSL Ubuntu, Ubuntu Server 22.04 LTS, macOS 15
 - **Developer productivity**: Automated setup of complete development environments
 - **Full-stack readiness**: Node.js, npm, Java, build tools, containers, databases
-- **IDE mastery**: Powerful text-based editors (Vim/Neovim) configured as full IDEs on all platforms, with optional GUI tools on macOS
+- **IDE mastery**: NeoVim configured as a powerful IDE for text-based development
+  - Custom configuration tailored for our development needs
+  - Works consistently across SSH sessions, containers, and local terminals
+  - No dependency on pre-built distributions - full control over our setup
 - Clean, documented, and maintainable code
 - Platform-specific implementations optimized for developer workflows
 
@@ -177,7 +184,8 @@ The setup script will:
 - **Build tools**: Maven, Gradle, Make, gcc/g++
 - **Version control**: Git with enhanced configuration
 - **Containers**: Docker, docker-compose
-- **Editors/IDEs**: Vim/Neovim with full IDE capabilities (all platforms), VS Code (macOS supplement)
+- **Primary IDE**: NeoVim with custom configuration for full IDE capabilities (all platforms)
+- **Supplementary editor**: VS Code (macOS only, for GUI convenience)
 - **Terminal tools**: tmux, zsh with productivity features
 - **Database tools**: PostgreSQL client, MySQL client, Redis tools
 - **Cloud CLIs**: AWS CLI, Azure CLI (optional)
