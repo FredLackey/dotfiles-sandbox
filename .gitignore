@@ -38,3 +38,45 @@ scrap/
 
 # Local git configuration that shouldn't be shared
 .git/config.local
+
+# Terraform files
+*.tfstate
+*.tfstate.*
+**/.terraform/*
+*.tfvars
+*.tfvars.json
+*.auto.tfvars
+*.auto.tfvars.json
+.terraform.lock.hcl
+terraform.tfstate.d/
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraformrc
+terraform.rc
+
+# SSH keys and certificates
+*.pem
+*.key
+*.pub
+*.crt
+*.cer
+*.pfx
+id_rsa
+id_rsa.pub
+id_ed25519
+id_ed25519.pub
+
+# AWS credentials and config
+.aws/
+aws-credentials
+.aws-credentials
+
+# Cloud provider credentials
+*-service-account.json
+*-credentials.json
+kubeconfig
+.kube/

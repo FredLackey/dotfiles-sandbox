@@ -2,7 +2,18 @@
   "permissions": {
     "allow": [
       "WebSearch",
-      "Bash(chmod:*)"
+      "Bash(chmod:*)",
+      "Bash(bash:*)",
+      "Bash(for:*)",
+      "Bash(do bash -n \"$script\")",
+      "Bash(done)",
+      "Bash(find:*)",
+      "Bash(./testing/scripts/connect.sh:*)",
+      "Bash(terraform output:*)",
+      "Bash(ssh:*)",
+      "Read(//private/tmp/**)",
+      "Bash(../../testing/scripts/connect.sh:*)",
+      "Bash(../scripts/connect.sh:*)"
     ],
     "deny": [],
     "ask": []
