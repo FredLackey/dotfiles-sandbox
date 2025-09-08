@@ -181,22 +181,11 @@ main() {
     
     print_title "Platform Setup: $platform"
     
-    # Capture output in case of error
-    local TMP_FILE="$(mktemp /tmp/XXXXX)"
-    if "$setup_script" > "$TMP_FILE" 2>&1; then
-        # Success - show the output
-        cat "$TMP_FILE"
-    else
-        # Failure - show error and output
+    # Run the platform script directly so we can see any prompts or issues
+    "$setup_script" || {
         print_error "Platform setup failed"
-        print_error "Error output:"
-        while read -r line; do
-            echo "   $line"
-        done < "$TMP_FILE"
-        rm -rf "$TMP_FILE"
         exit 1
-    fi
-    rm -rf "$TMP_FILE"
+    }
     
     print_title "Installation Complete!"
     print_success "Dotfiles installed successfully"

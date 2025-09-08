@@ -48,17 +48,21 @@ else
         local -r TMP_FILE="$(mktemp /tmp/XXXXX)"
         local exitCode=0
         
-        # Execute command completely silently
-        (eval "$CMDS") > "$TMP_FILE" 2>&1
-        exitCode=$?
+        # Show what we're doing
+        echo "   [⋯] $MSG"
         
-        if [ $exitCode -eq 0 ]; then
-            print_success "$MSG"
+        # Execute command completely silently
+        if eval "$CMDS" > "$TMP_FILE" 2>&1; then
+            # Move cursor up and overwrite with success
+            echo -e "\033[1A\033[K   [✔] $MSG"
+            exitCode=0
         else
-            print_error "$MSG"
-            # Show errors
+            # Move cursor up and overwrite with error
+            echo -e "\033[1A\033[K   [✖] $MSG"
+            exitCode=1
+            # Show error details
             while read -r line; do
-                print_error "↳ ERROR: $line"
+                echo "   ↳ $line"
             done < "$TMP_FILE"
         fi
         
@@ -286,6 +290,14 @@ configure_terminal() {
 main() {
     # Verify we're on Ubuntu (not WSL)
     verify_ubuntu
+    
+    # Check for sudo access without password (common on cloud instances)
+    if ! sudo -n true 2>/dev/null; then
+        print_warning "This script requires sudo access"
+        print_info "Please run: sudo -v (to cache credentials)"
+        print_info "Then run this script again"
+        exit 1
+    fi
     
     # Update package lists
     update_package_lists
