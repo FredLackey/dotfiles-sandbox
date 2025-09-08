@@ -63,6 +63,15 @@ All scripts are developed here and executed on different target systems.
 - **Avoid clever one-liners** in favor of readable, maintainable code
 - **Provide examples** where concepts might be unclear
 
+### Text File Creation Rules
+- **NEVER use control characters** (ASCII 0x00-0x1F except 0x09 tab, 0x0A newline, 0x0D carriage return)
+- **ABSOLUTELY NO NUL characters** (0x00) - these appear as red "NUL" markers in IDEs
+- **NO invisible characters** like ENQ (0x05), NUL (0x00), STX (0x02), DC4 (0x14), FS (0x1C), or other non-printable ASCII codes
+- **Use only standard UTF-8 text** for all markdown, configuration, and documentation files
+- **Control characters can cause**: IDE warnings (red squares/markers), parsing errors, and display issues
+- **If control characters are detected**, remove them immediately with: `perl -pi -e 's/[\x00-\x08\x0B-\x0C\x0E-\x1F]//g' filename`
+- **Common problematic characters**: NUL (0x00), STX (0x02), ENQ (0x05), DC4 (0x14), FS (0x1C)
+
 ### Fully Automated Execution
 - **Scripts must run without any human intervention**
 - **NO prompts for user input** during execution

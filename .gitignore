@@ -23,6 +23,7 @@ Thumbs.db
 # Temporary files
 tmp/
 temp/
+scrap/
 
 # Local customizations (user-specific files)
 *.local

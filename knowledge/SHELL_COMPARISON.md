@@ -32,11 +32,11 @@ Bash is the most widely used shell, serving as the default on most Linux distrib
 - **GPL licensed**: Free and open source
 
 ### Strengths
- **Portability**: Scripts work across all Unix-like systems  
- **Documentation**: Extensive resources and community support  
- **Stability**: Battle-tested over decades  
- **Industry standard**: Expected knowledge for system administrators  
- **Compatibility**: Works with virtually all shell scripts  
+✅ **Portability**: Scripts work across all Unix-like systems  
+✅ **Documentation**: Extensive resources and community support  
+✅ **Stability**: Battle-tested over decades  
+✅ **Industry standard**: Expected knowledge for system administrators  
+✅ **Compatibility**: Works with virtually all shell scripts  
 
 ### Weaknesses
 ❌ **Limited interactivity**: Lacks modern convenience features out-of-box  
@@ -70,11 +70,11 @@ ZSH, created by Paul Falstad in 1990, extends the Bourne shell with numerous imp
 - **Spell correction**: Automatically corrects minor typos
 
 ### Strengths
- **Customization**: Incredibly flexible with frameworks like Oh My ZSH  
- **Power features**: Advanced globbing, parameter expansion, array handling  
- **Active development**: Modern features and regular updates  
- **Git integration**: Excellent built-in and plugin support  
- **Directory navigation**: Features like auto_cd and directory stacks  
+✅ **Customization**: Incredibly flexible with frameworks like Oh My ZSH  
+✅ **Power features**: Advanced globbing, parameter expansion, array handling  
+✅ **Active development**: Modern features and regular updates  
+✅ **Git integration**: Excellent built-in and plugin support  
+✅ **Directory navigation**: Features like auto_cd and directory stacks  
 
 ### Weaknesses
 ❌ **Not POSIX-compliant**: May cause compatibility issues  
@@ -143,11 +143,11 @@ Fish, created by Axel Liljencrantz in 2005, prioritizes user-friendliness with s
 - **Search-as-you-type**: Always-on history search
 
 ### Strengths
- **Beginner-friendly**: Intuitive with minimal learning curve  
- **Zero configuration**: Productive immediately after installation  
- **Modern features**: Built-in highlighting, suggestions, completions  
- **Clean syntax**: More readable than traditional shells  
- **Interactive feedback**: Visual cues prevent errors  
+✅ **Beginner-friendly**: Intuitive with minimal learning curve  
+✅ **Zero configuration**: Productive immediately after installation  
+✅ **Modern features**: Built-in highlighting, suggestions, completions  
+✅ **Clean syntax**: More readable than traditional shells  
+✅ **Interactive feedback**: Visual cues prevent errors  
 
 ### Weaknesses
 ❌ **Not POSIX-compliant**: Scripts incompatible with other shells  
