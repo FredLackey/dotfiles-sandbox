@@ -15,7 +15,8 @@
       "Bash(../../testing/scripts/connect.sh:*)",
       "Bash(../scripts/connect.sh:*)",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(git push:*)"
     ],
     "deny": [],
     "ask": []
