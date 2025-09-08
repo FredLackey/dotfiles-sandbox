@@ -16,7 +16,10 @@
       "Bash(../scripts/connect.sh:*)",
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "mcp__firecrawl__firecrawl_search",
+      "mcp__firecrawl__firecrawl_scrape",
+      "Bash(perl:*)"
     ],
     "deny": [],
     "ask": []
