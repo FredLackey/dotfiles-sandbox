@@ -67,10 +67,12 @@ else
         return $exitCode
     }
     
-    check_command() {
-        command -v "$1" >/dev/null 2>&1
-    }
 fi
+
+# Common utility function
+check_command() {
+    command -v "$1" >/dev/null 2>&1
+}
 
 # Ask for sudo password upfront and keep it alive
 ask_for_sudo() {
