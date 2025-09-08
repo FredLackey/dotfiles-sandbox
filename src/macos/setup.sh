@@ -210,59 +210,87 @@ initialize_git_repo() {
     cd - >/dev/null
 }
 
-# Install development languages and tools (placeholder for future)
-install_development_stack() {
-    print_title "Development Stack"
-    
-    # Future installations will include:
-    # - Node.js and npm
-    # - Java JDK
-    # - Python
-    # - Docker Desktop
-    # - VS Code
-    # - Vim/Neovim
-    
-    print_info "Development stack installation (coming soon)"
-}
-
-# Configure shell environment (placeholder for future)
+# Configure shell environment (foundation for text-based development)
 configure_shell() {
-    print_title "Shell Configuration"
+    print_title "Shell Environment"
     
     # Future configurations will include:
-    # - ZSH configuration
-    # - Aliases and functions
+    # - ZSH enhancements (default on macOS)
+    # - Shell prompt customization
+    # - Aliases and functions for productivity
     # - PATH modifications
     # - Environment variables
+    # - Command history improvements
     
-    print_info "Shell configuration (coming soon)"
+    print_info "Shell environment configuration (coming soon)"
+}
+
+# Install text-based development environment (primary focus)
+install_text_based_dev_environment() {
+    print_title "Text-Based Development Environment"
+    
+    # Future installations will include:
+    # - Vim/Neovim as primary IDE
+    # - Vim plugins and configuration
+    # - Tmux for terminal multiplexing
+    # - Terminal-based file managers
+    # - Command-line development tools
+    
+    print_info "Text-based development environment (coming soon)"
+}
+
+# Install visual development environment (macOS supplementary tools)
+install_visual_dev_environment() {
+    print_title "Visual Development Environment (Supplementary)"
+    
+    # Future installations will include:
+    # - VS Code (for when GUI is convenient)
+    # - IntelliJ IDEA (optional, for Java development)
+    # - GUI Git clients (optional)
+    # - Database GUI tools
+    # - API testing tools (Postman, etc.)
+    
+    print_info "Visual development environment (coming soon)"
+}
+
+# Install programming languages and tools
+install_programming_tools() {
+    print_title "Programming Languages & Tools"
+    
+    # Future installations will include:
+    # - Node.js and npm (via Homebrew)
+    # - Java JDK (OpenJDK via Homebrew)
+    # - Python (via Homebrew)
+    # - Go
+    # - Docker Desktop
+    # - Build tools (make, cmake, etc.)
+    
+    print_info "Programming tools installation (coming soon)"
 }
 
 # Main function
 main() {
-    # Verify we're on macOS
+    # Step 1: System verification and preparation
     verify_macos
-    
-    # Install Xcode Command Line Tools
     install_xcode_tools
-    
-    # Install Homebrew
     install_homebrew
     
-    # Install Git
+    # Step 2: Core system tools
     install_git
-    
-    # Install essential tools
     install_essential_tools
-    
-    # Initialize Git repository
     initialize_git_repo
     
-    # Install development stack (placeholder)
-    install_development_stack
-    
-    # Configure shell (placeholder)
+    # Step 3: Shell and terminal setup (foundation)
     configure_shell
+    
+    # Step 4: Text-based development environment (primary)
+    install_text_based_dev_environment
+    
+    # Step 5: Programming languages and tools
+    install_programming_tools
+    
+    # Step 6: Visual development environment (macOS bonus)
+    install_visual_dev_environment
     
     print_title "Setup Complete!"
     print_success "macOS configured successfully"
