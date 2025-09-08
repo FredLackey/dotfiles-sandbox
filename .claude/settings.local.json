@@ -13,7 +13,9 @@
       "Bash(ssh:*)",
       "Read(//private/tmp/**)",
       "Bash(../../testing/scripts/connect.sh:*)",
-      "Bash(../scripts/connect.sh:*)"
+      "Bash(../scripts/connect.sh:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
     ],
     "deny": [],
     "ask": []
