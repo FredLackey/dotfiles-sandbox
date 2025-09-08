@@ -71,6 +71,12 @@ All scripts are developed here and executed on different target systems.
 - **Control characters can cause**: IDE warnings (red squares/markers), parsing errors, and display issues
 - **If control characters are detected**, remove them immediately with: `perl -pi -e 's/[\x00-\x08\x0B-\x0C\x0E-\x1F]//g' filename`
 - **Common problematic characters**: NUL (0x00), STX (0x02), ENQ (0x05), DC4 (0x14), FS (0x1C)
+- **Directory Trees and ASCII Art**:
+  - **USE ONLY standard box-drawing characters**: ├── │ └── ─
+  - **NEVER copy/paste ASCII art** from external sources (often contains hidden control characters)
+  - **BUILD directory trees character by character** using only the approved box-drawing characters
+  - **AVOID special Unicode box-drawing** beyond the basic set listed above
+  - **TEST with**: `perl -ne 'print "$.: $_" if /[\x00-\x08\x0B-\x0C\x0E-\x1F]/' filename` to verify no control characters
 
 ### Fully Automated Execution
 - **Scripts must run without any human intervention**
