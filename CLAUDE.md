@@ -4,14 +4,33 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository Overview
 
-This is a dotfiles configuration repository designed for **development only** - scripts are written here and deployed to target systems separately.
+This is a dotfiles configuration repository that automates the setup of development environments for **full-stack Node.js and Java developers**. The repository is designed for **development only** - scripts are written here and deployed to target systems separately.
+
+**Target User**: Software engineers specializing in full-stack development who need:
+- Modern JavaScript/TypeScript development with Node.js
+- Enterprise Java development with Spring Boot and microservices
+- API development and testing tools
+- Container-based development workflows
+- Database management and query tools
+- Mastery of text-based IDEs for productive coding in any environment (local, SSH, containers)
+- Optional GUI tools for convenience when available
 
 ### Target Environments
 
 Currently targeting three environments:
 1. **Windows WSL running Ubuntu** - Windows Subsystem for Linux with Ubuntu distribution
+   - Vim/Neovim configured as primary IDE
+   - Full Node.js and Java toolchain
+   - Seamless Windows filesystem integration
 2. **Ubuntu Server 22.04 LTS** - Standalone Ubuntu server installations
+   - SSH-friendly development setup
+   - Vim/Neovim as primary IDE with tmux for session management
+   - Complete build and deployment tools
 3. **macOS 15 (Sequoia)** - Current macOS desktop systems
+   - Vim/Neovim as primary IDE
+   - Supplementary GUI tools (VS Code, optional IntelliJ) for convenience
+   - Homebrew-based package management
+   - Docker Desktop for containerized development
 
 Future platforms (to be added after initial three are complete):
 - **RHEL (Red Hat Enterprise Linux)** - Enterprise Linux distributions
@@ -71,9 +90,24 @@ All scripts are developed here and executed on different target systems.
 
 ```
 src/
-├── common/    # Cross-platform configurations (bash, zsh, aliases, functions)
-├── macos/     # macOS-specific implementations (Homebrew, Xcode, system preferences)
-└── ubuntu/    # Ubuntu-specific implementations (APT, GNOME, distribution settings)
+├── common/    # Cross-platform configurations
+│              # - Shell configs (bash, zsh)
+│              # - Developer aliases and functions
+│              # - Git workflow optimizations
+│              # - Universal productivity tools
+├── macos/     # macOS-specific implementations
+│              # - Homebrew package management
+│              # - Vim/Neovim IDE configuration
+│              # - Supplementary GUI tools (VS Code)
+│              # - Node.js, Java, build tools
+│              # - Docker Desktop
+│              # - Database clients
+└── ubuntu/    # Ubuntu-specific implementations
+               # - APT package management
+               # - Vim/Neovim as primary IDE
+               # - Node.js (NodeSource), OpenJDK
+               # - Docker CE
+               # - Terminal multiplexing (tmux)
 
 scripts/       # Repository maintenance utilities (git operations, documentation)
                # Note: Repository scripts do NOT perform system configuration
@@ -168,9 +202,9 @@ mkdir -p ~/my-directory
 ### Platform Strategy
 
 - **Current Target Platforms**: 
-  - Windows WSL running Ubuntu
-  - Ubuntu Server 22.04 LTS
-  - macOS 15 (Sequoia)
+  - Windows WSL running Ubuntu (text-based development)
+  - Ubuntu Server 22.04 LTS (SSH/terminal development)
+  - macOS 15 (Sequoia) (GUI and terminal development)
 - **Future Platforms** (after initial three are complete):
   - RHEL (Red Hat Enterprise Linux)
   - AWS Linux
@@ -180,7 +214,10 @@ mkdir -p ~/my-directory
 - **Single Entry Point with Detection**: Only `src/setup.sh` performs platform detection to route to the correct platform folder
 - **No Other Dynamic Platform Detection**: All other scripts are written specifically for their target OS
 - **Common Folder**: Limited to truly universal functionality with no OS-specific behavior
-- **Software Installation**: Tools like Vim, Node.js installed per-platform with OS-specific methods
+- **Software Installation**: Developer tools installed per-platform with OS-specific methods:
+  - **All platforms**: Git, Vim/Neovim as primary IDE, Node.js, npm, Java JDK, Docker, build tools
+  - **macOS additions**: Supplementary VS Code, Homebrew packages, Docker Desktop
+  - **Ubuntu/WSL**: Terminal multiplexers for enhanced productivity
 - **WSL Considerations**: WSL Ubuntu scripts may need special handling for Windows interop features
 
 ## Repository Commands
@@ -192,7 +229,7 @@ Currently, this is a development repository with no build or test commands. Scri
 
 ## Deployment Model
 
-Target systems will use a one-liner installation:
+Target systems will use a one-liner installation to transform a fresh OS into a complete developer workstation:
 
 **macOS:**
 ```bash
@@ -211,6 +248,14 @@ The setup script will automatically:
 4. Install git and other essential tools via platform package managers
 5. Initialize the extracted folder as a git repository for future updates
 6. Execute the appropriate platform-specific setup
+7. Install complete development stack:
+   - Programming languages (Node.js, Java, Python)
+   - Build tools (npm, Maven, Gradle, Make)
+   - Container tools (Docker, docker-compose)
+   - IDEs/Editors (Vim/Neovim as primary IDE everywhere, supplementary VS Code on macOS)
+   - Database clients and tools
+   - Cloud CLIs and deployment tools
+   - Developer productivity utilities
 
 Updates are applied via `git pull` followed by re-running `src/setup.sh`.
 - The repo will be hosted at https://github.com/FredLackey/dotfiles-sandbox during development.  Once perfected it will be replace the existing repo at https://github.com/FredLackey/dotfiles

@@ -1,10 +1,12 @@
 # Dotfiles
 
-A fresh approach to dotfiles configuration for three specific target environments.
+Development environment setup for full-stack Node.js and Java developers across three target platforms.
 
 ## Overview
 
-This repository represents a new dotfiles effort designed to replace the current dotfiles setup with a more thoughtful, documented, and maintainable approach.
+This repository automates the setup of complete development environments for software engineers specializing in full-stack Node.js and Java development. It configures essential developer tools, IDEs, build systems, and productivity utilities to enable productive coding whether in GUI or text-based environments.
+
+The goal is to transform a fresh OS installation into a fully-configured developer workstation with all necessary tools for modern web development, API development, and enterprise Java applications.
 
 ### Target Environments
 
@@ -22,6 +24,8 @@ Future platforms (planned after initial three are complete):
 - **Interactive Shell**: ZShell (zsh) is the preferred target environment, using the version that ships with the system
 - **Scripting Language**: Bash for all automation and setup scripts
 - **Shell Philosophy**: Never install or upgrade shell interpreters - work with what's already available
+- **Development Focus**: Full-stack Node.js and Java development with appropriate tooling for each platform
+- **IDE Strategy**: Text-based editors (Vim/Neovim) as the primary IDE across ALL platforms, with supplementary GUI tools (VS Code) available on macOS for convenience
 
 ## Project Structure
 
@@ -38,18 +42,32 @@ The source directory is organized by platform specificity:
   - Shell configurations (primarily zsh interactive, bash scripts) targeting common platform features
   - Universal aliases, functions, and exports
   - Cross-platform compatible settings
+  - Developer productivity aliases and functions
+  - Git workflow optimizations
 
 - **`src/macos/`** - macOS-specific implementations
   - Homebrew package installations
+  - Development tools: Node.js, npm, Java JDK, Maven, Gradle
+  - GUI IDEs: VS Code, IntelliJ IDEA (optional)
   - Xcode command line utilities setup
   - macOS system preferences and defaults
-  - Platform-specific optimizations
+  - Docker Desktop and container tools
+  - Database clients and tools
 
 - **`src/ubuntu/`** - Ubuntu-specific implementations  
   - APT package management
-  - GNOME desktop environment configurations
-  - Ubuntu-specific system utilities
-  - Distribution-specific settings
+  - Development tools: Node.js (via NodeSource), npm, OpenJDK, Maven, Gradle
+  - Text-based IDEs: Vim/Neovim with IDE features, tmux for session management
+  - Build essentials and compilation tools
+  - Docker and container runtime
+  - Database tools and clients
+  - Server-specific developer utilities
+
+- **`src/wsl/`** - WSL-specific implementations (planned)
+  - Ubuntu base with Windows interoperability
+  - Development tools matching Ubuntu Server
+  - Special handling for Windows filesystem integration
+  - WSL-specific optimizations for cross-platform development
 
 #### Platform Strategy
 
@@ -107,9 +125,11 @@ The following directories contain reference materials that can be learned from b
 
 ### Current Focus
 - **Three target environments**: Windows WSL Ubuntu, Ubuntu Server 22.04 LTS, macOS 15
+- **Developer productivity**: Automated setup of complete development environments
+- **Full-stack readiness**: Node.js, npm, Java, build tools, containers, databases
+- **IDE mastery**: Powerful text-based editors (Vim/Neovim) configured as full IDEs on all platforms, with optional GUI tools on macOS
 - Clean, documented, and maintainable code
-- Manual review and understanding of all configurations
-- Platform-specific implementations for each environment
+- Platform-specific implementations optimized for developer workflows
 
 ### Design Principles
 - **Each script MUST be idempotent** (can be run multiple times safely) - THIS IS CRITICAL
@@ -150,7 +170,18 @@ The setup script will:
 4. Install git and other essential tools
 5. Initialize the extracted folder as a git repository for future updates
 6. Execute the appropriate platform-specific setup
-7. Configure your entire system without any prompts or manual intervention
+7. Configure your entire development environment without any prompts or manual intervention
+
+**What gets installed:**
+- **Development runtimes**: Node.js, npm/yarn, Java JDK, Python
+- **Build tools**: Maven, Gradle, Make, gcc/g++
+- **Version control**: Git with enhanced configuration
+- **Containers**: Docker, docker-compose
+- **Editors/IDEs**: Vim/Neovim with full IDE capabilities (all platforms), VS Code (macOS supplement)
+- **Terminal tools**: tmux, zsh with productivity features
+- **Database tools**: PostgreSQL client, MySQL client, Redis tools
+- **Cloud CLIs**: AWS CLI, Azure CLI (optional)
+- **Developer utilities**: jq, httpie, curl, wget, tree, htop
 
 **Important**: Setup scripts will run completely unattended - no user interaction required. The goal is to configure a new machine from start to finish without prompts or manual intervention.
 
@@ -221,4 +252,4 @@ When working on this project:
 
 ---
 
-*This dotfiles setup prioritizes understanding and maintainability over convenience.*
+*This dotfiles setup creates production-ready development environments for full-stack engineers, prioritizing developer productivity and maintainability.*
