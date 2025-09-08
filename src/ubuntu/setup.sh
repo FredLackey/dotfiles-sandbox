@@ -8,27 +8,68 @@ set -e
 
 # Configuration
 DOTFILES_DIR="$HOME/dotfiles"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# Utility functions (copied from src/common/utils.sh for self-contained execution)
-print_error() {
-    echo -e "\033[0;31m[ERROR]\033[0m $1" >&2
-}
-
-print_success() {
-    echo -e "\033[0;32m[SUCCESS]\033[0m $1"
-}
-
-print_info() {
-    echo -e "\033[0;34m[INFO]\033[0m $1"
-}
-
-print_warning() {
-    echo -e "\033[0;33m[WARNING]\033[0m $1"
-}
-
-check_command() {
-    command -v "$1" >/dev/null 2>&1
-}
+# Source output formatting utilities if available
+if [ -f "$SCRIPT_DIR/../utils/output.sh" ]; then
+    source "$SCRIPT_DIR/../utils/output.sh"
+else
+    # Fallback to basic output functions
+    print_in_color() {
+        printf "%b" \
+            "$(tput setaf "$2" 2> /dev/null)" \
+            "$1" \
+            "$(tput sgr0 2> /dev/null)"
+    }
+    
+    print_error() {
+        print_in_color "   [✖] $1\n" 1
+    }
+    
+    print_success() {
+        print_in_color "   [✔] $1\n" 2
+    }
+    
+    print_info() {
+        print_in_color "   [i] $1\n" 5
+    }
+    
+    print_warning() {
+        print_in_color "   [!] $1\n" 3
+    }
+    
+    print_title() {
+        print_in_color "\n   $1\n\n" 5
+    }
+    
+    execute() {
+        local -r CMDS="$1"
+        local -r MSG="${2:-$1}"
+        local -r TMP_FILE="$(mktemp /tmp/XXXXX)"
+        local exitCode=0
+        
+        # Execute command completely silently
+        (eval "$CMDS") > "$TMP_FILE" 2>&1
+        exitCode=$?
+        
+        if [ $exitCode -eq 0 ]; then
+            print_success "$MSG"
+        else
+            print_error "$MSG"
+            # Show errors
+            while read -r line; do
+                print_error "↳ ERROR: $line"
+            done < "$TMP_FILE"
+        fi
+        
+        rm -rf "$TMP_FILE"
+        return $exitCode
+    }
+    
+    check_command() {
+        command -v "$1" >/dev/null 2>&1
+    }
+fi
 
 # Verify we're running on Ubuntu (not WSL)
 verify_ubuntu() {
@@ -57,33 +98,30 @@ verify_ubuntu() {
         fi
     fi
     
-    print_info "Verified Ubuntu Server environment"
+    print_success "Ubuntu Server environment verified"
 }
 
-# Update package lists
+# Update package lists  
 update_package_lists() {
-    print_info "Updating package lists..."
-    
-    # Update apt repositories
-    sudo apt-get update || {
-        print_error "Failed to update package lists"
-        return 1
-    }
-    
-    print_success "Package lists updated"
+    execute \
+        "sudo apt-get update -qqy" \
+        "Updating package lists"
 }
 
 # Install Git and essential build tools
 install_git() {
-    print_info "Installing Git and build essentials..."
+    print_title "Git & Build Essentials"
     
     # Check if git is already installed
     if check_command git; then
-        print_info "Git already installed"
-        sudo apt-get install -y --only-upgrade git 2>/dev/null || true
+        print_success "Git (already installed)"
+        execute \
+            "sudo apt-get install -qqy --only-upgrade git" \
+            "Updating Git"
     else
-        sudo apt-get install -y git
-        print_success "Git installed"
+        execute \
+            "sudo apt-get install -qqy git" \
+            "Git"
     fi
     
     # Install build essentials
@@ -100,19 +138,18 @@ install_git() {
     
     for package in "${packages[@]}"; do
         if dpkg -l | grep -q "^ii  $package "; then
-            print_info "$package already installed"
+            print_success "$package (already installed)"
         else
-            print_info "Installing $package..."
-            sudo apt-get install -y "$package"
+            execute \
+                "sudo apt-get install -qqy '$package'" \
+                "$package"
         fi
     done
-    
-    print_success "Git and build essentials installed"
 }
 
 # Install essential command-line tools
 install_essential_tools() {
-    print_info "Installing essential tools..."
+    print_title "Essential Tools"
     
     local tools=(
         "tree"      # Directory listing
@@ -130,39 +167,42 @@ install_essential_tools() {
     
     for tool in "${tools[@]}"; do
         if dpkg -l | grep -q "^ii  $tool "; then
-            print_info "$tool already installed"
+            print_success "$tool (already installed)"
         else
-            print_info "Installing $tool..."
-            sudo apt-get install -y "$tool"
+            execute \
+                "sudo apt-get install -qqy '$tool'" \
+                "$tool"
         fi
     done
-    
-    print_success "Essential tools installed"
 }
 
 # Initialize Git repository for dotfiles
 initialize_git_repo() {
-    print_info "Initializing Git repository for dotfiles..."
+    print_title "Git Repository"
     
     cd "$DOTFILES_DIR"
     
     # Check if already a git repository
     if [ -d ".git" ]; then
-        print_success "Git repository already initialized"
+        print_success "Git repository (already initialized)"
         
         # Set up remote if not already configured
         if ! git remote | grep -q "origin"; then
-            git remote add origin "https://github.com/fredlackey/dotfiles-sandbox.git"
-            print_info "Added git remote origin"
+            execute \
+                "git remote add origin 'https://github.com/fredlackey/dotfiles-sandbox.git'" \
+                "Adding git remote origin"
+        else
+            print_success "Git remote origin (already configured)"
         fi
     else
         # Initialize new repository
-        git init
-        git remote add origin "https://github.com/fredlackey/dotfiles-sandbox.git"
-        git fetch origin
-        git reset --hard origin/main
-        git branch --set-upstream-to=origin/main main
-        print_success "Git repository initialized"
+        execute \
+            "git init && \
+             git remote add origin 'https://github.com/fredlackey/dotfiles-sandbox.git' && \
+             git fetch origin && \
+             git reset --hard origin/main && \
+             git branch --set-upstream-to=origin/main main" \
+            "Initializing Git repository"
     fi
     
     cd - >/dev/null
@@ -170,35 +210,31 @@ initialize_git_repo() {
 
 # Configure system settings
 configure_system() {
-    print_info "Configuring system settings..."
-    
-    # Set timezone (optional, can be configured)
-    # sudo timedatectl set-timezone America/New_York
+    print_title "System Configuration"
     
     # Configure swap if needed
     if [ ! -f /swapfile ] && [ "$(free -m | awk '/^Mem:/{print $2}')" -lt 2048 ]; then
-        print_info "Creating swap file..."
-        sudo fallocate -l 2G /swapfile
-        sudo chmod 600 /swapfile
-        sudo mkswap /swapfile
-        sudo swapon /swapfile
+        execute \
+            "sudo fallocate -l 2G /swapfile && \
+             sudo chmod 600 /swapfile && \
+             sudo mkswap /swapfile && \
+             sudo swapon /swapfile" \
+            "Creating 2GB swap file"
         
         # Make swap permanent
         if ! grep -q "/swapfile" /etc/fstab; then
-            echo "/swapfile none swap sw 0 0" | sudo tee -a /etc/fstab
+            execute \
+                "echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab > /dev/null" \
+                "Making swap permanent"
         fi
-        
-        print_success "Swap file created"
+    else
+        print_success "Swap (already configured)"
     fi
-    
-    # No SSH server configuration needed for development workstation
-    
-    print_success "System settings configured"
 }
 
 # Install development languages and tools (placeholder for future)
 install_development_stack() {
-    print_info "Development stack installation placeholder..."
+    print_title "Development Stack"
     
     # Future installations will include:
     # - Node.js via NodeSource
@@ -208,12 +244,12 @@ install_development_stack() {
     # - Docker Compose
     # - Vim/Neovim with plugins
     
-    print_info "Full development stack will be installed in future iterations"
+    print_info "Development stack installation (coming soon)"
 }
 
 # Configure shell environment (placeholder for future)
 configure_shell() {
-    print_info "Shell configuration placeholder..."
+    print_title "Shell Configuration"
     
     # Future configurations will include:
     # - ZSH installation and configuration
@@ -222,31 +258,32 @@ configure_shell() {
     # - PATH modifications
     # - Environment variables
     
-    print_info "Shell environment will be configured in future iterations"
+    print_info "Shell configuration (coming soon)"
 }
 
 # Configure terminal and console
 configure_terminal() {
-    print_info "Configuring terminal settings..."
+    print_title "Terminal Configuration"
     
     # Set default editor
     if ! grep -q "EDITOR=" "$HOME/.bashrc" 2>/dev/null; then
-        echo 'export EDITOR=vim' >> "$HOME/.bashrc"
-        print_info "Set default editor to vim"
+        execute \
+            "echo 'export EDITOR=vim' >> '$HOME/.bashrc'" \
+            "Setting default editor to vim"
+    else
+        print_success "Default editor (already set)"
     fi
     
     # Enable color prompt if not already enabled
     if [ -f "$HOME/.bashrc" ]; then
-        sed -i 's/#force_color_prompt=yes/force_color_prompt=yes/' "$HOME/.bashrc"
+        execute \
+            "sed -i 's/#force_color_prompt=yes/force_color_prompt=yes/' '$HOME/.bashrc'" \
+            "Enabling color prompt"
     fi
-    
-    print_success "Terminal settings configured"
 }
 
 # Main function
 main() {
-    print_info "Starting Ubuntu Server setup..."
-    
     # Verify we're on Ubuntu (not WSL)
     verify_ubuntu
     
@@ -274,7 +311,8 @@ main() {
     # Configure shell (placeholder)
     configure_shell
     
-    print_success "Ubuntu Server setup completed!"
+    print_title "Setup Complete!"
+    print_success "Ubuntu Server configured successfully"
     print_info "Some changes may require a new terminal session to take effect"
     
     return 0

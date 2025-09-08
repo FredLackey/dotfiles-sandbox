@@ -1,15 +1,12 @@
 #!/bin/bash
 
 # Connect to the dotfiles-ubuntu EC2 instance via SSH
-# Gets connection info from Terraform outputs
+# This script is specific to the dotfiles-ubuntu Terraform project
 
-# Exit on error and show commands for debugging
+# Exit on error
 set -e
-# Uncomment for debugging
-# set -x
 
 # Configuration
-IAC_PROJECT="dotfiles-ubuntu"
 KEY_NAME="dotfiles-ubuntu-key"
 SSH_USER="ubuntu"
 
@@ -26,35 +23,18 @@ print_info() {
     echo -e "\033[0;34m[INFO]\033[0m $1"
 }
 
-# Find the repository root directory
-find_repo_root() {
-    local current_dir="$(pwd)"
-    
-    while [ "$current_dir" != "/" ]; do
-        if [ -d "$current_dir/.git" ] && [ -d "$current_dir/testing" ]; then
-            echo "$current_dir"
-            return 0
-        fi
-        current_dir="$(dirname "$current_dir")"
-    done
-    
-    print_error "Could not find repository root"
-    return 1
-}
-
 # Main function
 main() {
-    # Find repository root
-    repo_root=$(find_repo_root)
-    if [ $? -ne 0 ]; then
-        print_error "Failed to find repository root"
-        exit 1
-    fi
+    # Get the script's directory (should be in testing/iac/dotfiles-ubuntu/scripts)
+    script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
     
-    # Change to Terraform directory for the IAC project
-    terraform_dir="$repo_root/testing/iac/${IAC_PROJECT}"
-    if [ ! -d "$terraform_dir" ]; then
-        print_error "Terraform project directory not found: $terraform_dir"
+    # Move up one level to the Terraform project directory
+    terraform_dir="$(dirname "$script_dir")"
+    
+    # Verify we're in the right place
+    if [ ! -f "$terraform_dir/main.tf" ]; then
+        print_error "This script must be run from testing/iac/dotfiles-ubuntu/scripts/"
+        print_error "Current location: $script_dir"
         exit 1
     fi
     
@@ -62,7 +42,7 @@ main() {
     
     # Check if Terraform is initialized
     if [ ! -d ".terraform" ]; then
-        print_error "Terraform not initialized. Run: cd testing/iac/${IAC_PROJECT} && terraform init"
+        print_error "Terraform not initialized. Run: terraform init"
         exit 1
     fi
     
@@ -79,12 +59,12 @@ main() {
     
     if [ -z "$instance_ip" ] || [ "$instance_ip" = "null" ]; then
         print_error "No instance IP found in Terraform outputs"
-        print_info "Make sure the instance is created: cd testing/iac/${IAC_PROJECT} && terraform apply"
+        print_info "Make sure the instance is created: terraform apply"
         exit 1
     fi
     
     # Find the SSH key file
-    key_file="$repo_root/testing/iac/${IAC_PROJECT}/${KEY_NAME}.pem"
+    key_file="$terraform_dir/${KEY_NAME}.pem"
     if [ ! -f "$key_file" ]; then
         print_error "SSH key not found: $key_file"
         print_info "The key should have been created by Terraform"

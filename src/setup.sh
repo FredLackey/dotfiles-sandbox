@@ -10,87 +10,114 @@ set -e
 # Get the directory where this script is located
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# Source common functions if running from local directory
+# Source output formatting functions if running from local directory
 # When run via curl/wget, these functions are embedded below
-if [ -f "$SCRIPT_DIR/utils/common.sh" ]; then
-    source "$SCRIPT_DIR/utils/common.sh"
+if [ -f "$SCRIPT_DIR/utils/output.sh" ]; then
+    source "$SCRIPT_DIR/utils/output.sh"
 else
-    # Embedded functions for one-liner installation
-    # These are copied from src/utils/common.sh
+    # Embedded output functions for one-liner installation
+    # These are minimal versions from src/utils/output.sh
     
-    REPO_OWNER="fredlackey"
-    REPO_NAME="dotfiles-sandbox"
-    REPO_BRANCH="main"
-    DOTFILES_DIR="$HOME/dotfiles"
+    print_in_color() {
+        printf "%b" \
+            "$(tput setaf "$2" 2> /dev/null)" \
+            "$1" \
+            "$(tput sgr0 2> /dev/null)"
+    }
     
     print_error() {
-        echo -e "\033[0;31m[ERROR]\033[0m $1" >&2
+        print_in_color "   [✖] $1\n" 1
     }
     
     print_success() {
-        echo -e "\033[0;32m[SUCCESS]\033[0m $1"
+        print_in_color "   [✔] $1\n" 2
     }
     
     print_info() {
-        echo -e "\033[0;34m[INFO]\033[0m $1"
+        print_in_color "   [i] $1\n" 5
     }
     
-    check_command() {
-        command -v "$1" >/dev/null 2>&1
+    print_title() {
+        print_in_color "\n   $1\n\n" 5
     }
     
-    download_repository() {
-        local tarball_url="https://github.com/${REPO_OWNER}/${REPO_NAME}/tarball/${REPO_BRANCH}"
-        local temp_file="/tmp/dotfiles-$$.tar.gz"
-        local temp_dir="/tmp/dotfiles-extract-$$"
+    execute() {
+        local -r CMDS="$1"
+        local -r MSG="${2:-$1}"
+        local -r TMP_FILE="$(mktemp /tmp/XXXXX)"
+        local exitCode=0
         
-        print_info "Downloading dotfiles repository..."
+        # Execute command completely silently
+        (eval "$CMDS") > "$TMP_FILE" 2>&1
+        exitCode=$?
         
-        if check_command curl; then
-            curl -LsS "$tarball_url" -o "$temp_file" || {
-                print_error "Failed to download repository"
-                return 1
-            }
-        elif check_command wget; then
-            wget -qO "$temp_file" "$tarball_url" || {
-                print_error "Failed to download repository"
-                return 1
-            }
+        if [ $exitCode -eq 0 ]; then
+            print_success "$MSG"
         else
-            print_error "Neither curl nor wget is available"
-            return 1
+            print_error "$MSG"
+            # Show error details
+            while read -r line; do
+                print_in_color "   ↳ ERROR: $line\n" 1
+            done < "$TMP_FILE"
         fi
         
-        mkdir -p "$temp_dir"
-        
-        print_info "Extracting repository..."
-        tar -xzf "$temp_file" -C "$temp_dir" --strip-components=1 || {
-            print_error "Failed to extract repository"
-            rm -f "$temp_file"
-            rm -rf "$temp_dir"
-            return 1
-        }
-        
-        if [ -d "$DOTFILES_DIR" ]; then
-            print_info "Existing dotfiles directory found, updating..."
-            cp -r "$temp_dir"/* "$DOTFILES_DIR"/ 2>/dev/null || true
-            cp -r "$temp_dir"/.[^.]* "$DOTFILES_DIR"/ 2>/dev/null || true
-        else
-            print_info "Creating dotfiles directory..."
-            mv "$temp_dir" "$DOTFILES_DIR"
-        fi
-        
-        rm -f "$temp_file"
-        rm -rf "$temp_dir"
-        
-        print_success "Repository downloaded to $DOTFILES_DIR"
-        return 0
+        rm -rf "$TMP_FILE"
+        return $exitCode
     }
+fi
+
+# Embedded common variables and functions
+REPO_OWNER="fredlackey"
+REPO_NAME="dotfiles-sandbox"
+REPO_BRANCH="main"
+DOTFILES_DIR="$HOME/dotfiles"
+
+check_command() {
+    command -v "$1" >/dev/null 2>&1
+}
+    
+download_repository() {
+    local tarball_url="https://github.com/${REPO_OWNER}/${REPO_NAME}/tarball/${REPO_BRANCH}"
+    local temp_file="/tmp/dotfiles-$$.tar.gz"
+    local temp_dir="/tmp/dotfiles-extract-$$"
+    
+    # Download repository
+    if check_command curl; then
+        execute "curl -LsS '$tarball_url' -o '$temp_file'" \
+                "Downloading repository"
+    elif check_command wget; then
+        execute "wget -qO '$temp_file' '$tarball_url'" \
+                "Downloading repository"
+    else
+        print_error "Neither curl nor wget is available"
+        return 1
+    fi
+    
+    # Extract repository
+    execute "mkdir -p '$temp_dir' && tar -xzf '$temp_file' -C '$temp_dir' --strip-components=1" \
+            "Extracting repository"
+    
+    # Move to final location
+    if [ -d "$DOTFILES_DIR" ]; then
+        execute "cp -r '$temp_dir'/* '$DOTFILES_DIR'/ 2>/dev/null || true; \
+                 cp -r '$temp_dir'/.[^.]* '$DOTFILES_DIR'/ 2>/dev/null || true" \
+                "Updating existing dotfiles"
+    else
+        execute "mv '$temp_dir' '$DOTFILES_DIR'" \
+                "Creating dotfiles directory"
+    fi
+    
+    # Cleanup
+    execute "rm -f '$temp_file' && rm -rf '$temp_dir'" \
+            "Cleaning up temporary files"
+    
+    return 0
+}
 fi
 
 # Main orchestration function
 main() {
-    print_info "Starting dotfiles installation..."
+    print_title "Dotfiles Installation"
     
     # Step 1: Download repository (if not already present)
     if [ ! -d "$DOTFILES_DIR" ] || [ ! -f "$DOTFILES_DIR/src/setup.sh" ]; then
@@ -99,11 +126,10 @@ main() {
             exit 1
         }
     else
-        print_info "Using existing dotfiles directory at $DOTFILES_DIR"
+        print_success "Using existing dotfiles at $DOTFILES_DIR"
     fi
     
     # Step 2: Detect platform
-    print_info "Detecting platform..."
     if [ -f "$DOTFILES_DIR/src/utils/detect_os.sh" ]; then
         platform=$("$DOTFILES_DIR/src/utils/detect_os.sh") || {
             print_error "Failed to detect platform"
@@ -126,7 +152,7 @@ main() {
         fi
     fi
     
-    print_info "Detected platform: $platform"
+    print_success "Detected platform: $platform"
     
     # Step 3: Route to platform-specific setup
     case "$platform" in
@@ -153,13 +179,16 @@ main() {
     
     # Make executable and run platform-specific setup
     chmod +x "$setup_script"
-    print_info "Executing platform-specific setup..."
+    
+    print_title "Platform Setup: $platform"
+    
     "$setup_script" || {
         print_error "Platform setup failed"
         exit 1
     }
     
-    print_success "Dotfiles installation completed successfully!"
+    print_title "Installation Complete!"
+    print_success "Dotfiles installed successfully"
     print_info "Please start a new terminal session to load all configurations"
     
     return 0
