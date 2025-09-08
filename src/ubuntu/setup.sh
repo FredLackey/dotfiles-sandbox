@@ -48,16 +48,13 @@ else
         local -r TMP_FILE="$(mktemp /tmp/XXXXX)"
         local exitCode=0
         
-        # Show what we're doing
         echo "   [⋯] $MSG"
         
-        # Execute command completely silently
+        # Execute command silently (sudo already authenticated)
         if eval "$CMDS" > "$TMP_FILE" 2>&1; then
-            # Move cursor up and overwrite with success
             echo -e "\033[1A\033[K   [✔] $MSG"
             exitCode=0
         else
-            # Move cursor up and overwrite with error
             echo -e "\033[1A\033[K   [✖] $MSG"
             exitCode=1
             # Show error details
@@ -74,6 +71,22 @@ else
         command -v "$1" >/dev/null 2>&1
     }
 fi
+
+# Ask for sudo password upfront and keep it alive
+ask_for_sudo() {
+    # Ask for the administrator password upfront
+    print_info "Administrator privileges will be required..."
+    
+    # Prompt for password
+    sudo -v
+    
+    # Keep sudo alive until the script finishes
+    while true; do
+        sudo -n true
+        sleep 60
+        kill -0 "$$" || exit
+    done &> /dev/null &
+}
 
 # Verify we're running on Ubuntu (not WSL)
 verify_ubuntu() {
@@ -108,7 +121,7 @@ verify_ubuntu() {
 # Update package lists  
 update_package_lists() {
     execute \
-        "sudo apt-get update -qqy" \
+        "sudo apt-get update -qq" \
         "Updating package lists"
 }
 
@@ -291,13 +304,8 @@ main() {
     # Verify we're on Ubuntu (not WSL)
     verify_ubuntu
     
-    # Check for sudo access without password (common on cloud instances)
-    if ! sudo -n true 2>/dev/null; then
-        print_warning "This script requires sudo access"
-        print_info "Please run: sudo -v (to cache credentials)"
-        print_info "Then run this script again"
-        exit 1
-    fi
+    # Ask for sudo password upfront
+    ask_for_sudo
     
     # Update package lists
     update_package_lists
