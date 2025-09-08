@@ -6,6 +6,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This is a dotfiles configuration repository for macOS and Ubuntu systems. The repository is designed for **development only** - scripts are written here and deployed to target systems separately.
 
+### Shell Philosophy
+- **Interactive Shell**: ZShell (zsh) is the preferred target environment, using the version that ships with the system
+- **Scripting Language**: Bash for all automation and setup scripts
+- **Shell Management**: Never install or upgrade shell interpreters - work with what's already available on target systems
+
 ## Critical Development Rules
 
 ### DO NOT MODIFY THIS DEVELOPMENT SYSTEM
@@ -28,11 +33,18 @@ src/
 └── ubuntu/    # Ubuntu-specific implementations (APT, GNOME, distribution settings)
 
 scripts/       # Repository maintenance utilities (git operations, documentation)
+               # Note: Repository scripts do NOT perform system configuration
 
-_legacy/       # Reference: Current production dotfiles (DO NOT TRUST OR COPY)
+_legacy/       # Reference: Current production dotfiles (trusted but outdated practices)
 _archive/      # Reference: Previous auto-generated attempt (DO NOT TRUST OR COPY)
-_examples/     # Reference: Other developers' dotfiles (DO NOT TRUST OR COPY)
+_examples/     # Reference: Other developers' dotfiles (trusted reference for learning)
 ```
+
+### ⚠️ Important Reference Folder Warning
+- **`_archive/`** contains bloated, undocumented auto-generated code and should NOT be trusted
+- **`_legacy/`** contains working examples but uses outdated practices that conflict with current architecture
+- **`_examples/`** contains quality examples from other developers for learning techniques
+- **Do not copy code directly from any reference folders without understanding and adapting to current practices**
 
 ### Important Design Patterns
 
@@ -81,10 +93,12 @@ fi
 
 ### Platform Strategy
 
-- Primary focus on macOS during initial development
-- Ubuntu support planned for future iterations
-- Common folder targets shared functionality across platforms
-- Platform-specific implementations in respective folders
+- **Current Focus**: macOS only during initial development cycle
+- **Future Support**: Ubuntu, WSL, and Windows planned for future iterations
+- **Common Folder**: Targets shared functionality that works across different shell environments
+- **Platform Detection**: Scripts will detect available shell capabilities on target systems
+- **Adaptive Configurations**: Zsh configurations that work with different versions across platforms
+- **Fallback Strategies**: Graceful handling for systems where zsh is not available
 
 ## Repository Commands
 

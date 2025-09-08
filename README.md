@@ -8,9 +8,10 @@ This repository represents a new dotfiles effort designed to replace the current
 
 ### Architecture
 
-- **Primary Shell**: ZShell (zsh) for interactive terminal sessions
-- **Scripting**: Bash for all automation and setup scripts
-- **Target Platforms**: macOS (primary focus) and Ubuntu (future)
+- **Interactive Shell**: ZShell (zsh) is the preferred target environment, using the version that ships with the system
+- **Scripting Language**: Bash for all automation and setup scripts
+- **Target Platforms**: macOS (current focus), WSL, Windows, and Ubuntu (future)
+- **Shell Philosophy**: Never install or upgrade shell interpreters - work with what's already available
 
 ## Project Structure
 
@@ -24,7 +25,7 @@ This repository represents a new dotfiles effort designed to replace the current
 The source directory is organized by platform specificity:
 
 - **`src/common/`** - Shared configurations that work across platforms
-  - Shell configurations (bash, zsh) targeting common platform features
+  - Shell configurations (primarily zsh interactive, bash scripts) targeting common platform features
   - Universal aliases, functions, and exports
   - Cross-platform compatible settings
 
@@ -42,7 +43,7 @@ The source directory is organized by platform specificity:
 
 #### Platform Strategy
 
-The common folder targets shared functionality, though bash and zsh version compatibility between macOS and Ubuntu may require platform-specific implementations where universal approaches aren't feasible.
+The common folder targets shared functionality that works across different shell environments. While zsh is the preferred interactive shell, we work with whatever shell interpreter ships with each target environment. All automation scripts are written in bash regardless of the interactive shell. Platform-specific implementations may be needed where shell capabilities or availability differ significantly.
 
 #### Repository Scripts (`scripts/`)
 
@@ -58,11 +59,15 @@ The scripts folder contains repository maintenance utilities:
 
 The following directories contain reference materials that can be learned from but follow different practices than this project:
 
-- **`_legacy/`** - Current production dotfiles stored as examples
-- **`_archive/`** - Previous attempt at dotfiles automation (auto-generated, undocumented)
-- **`_examples/`** - Collection of other developers' dotfiles for learning techniques
+- **`_legacy/`** - Current production dotfiles (trusted but outdated practices)
+- **`_archive/`** - Previous attempt at dotfiles automation (auto-generated, undocumented - do not trust)
+- **`_examples/`** - Collection of other developers' dotfiles (trusted reference for learning techniques)
 
-> ⚠️ **Important**: Reference directories (`_*`) contain examples only and should not be trusted for direct implementation. They may not follow current best practices or project goals.
+> ⚠️ **Important**: 
+> - **`_archive/`** contains bloated, undocumented auto-generated code and should not be trusted
+> - **`_legacy/`** contains working examples but uses outdated practices that conflict with current architecture
+> - **`_examples/`** contains quality examples from other developers for learning techniques
+> - Do not copy code directly from any reference folders without understanding and adapting to current practices
 
 ## Development Philosophy
 
@@ -74,13 +79,16 @@ The following directories contain reference materials that can be learned from b
 
 ### Design Principles
 - Each script must be idempotent (can be run multiple times safely)
+- Use the shell interpreter that ships with the target environment (never install/upgrade shells)
 - Comprehensive documentation for all configurations
 - Small, focused files (< 200 lines)
 - No installation of packages during development (this repo is for deployment elsewhere)
 
 ### Future Considerations
-- Separate configuration sets for bash and zsh environments
-- Support for systems without zsh availability
+- Adaptive zsh configurations that work with different versions across platforms
+- Graceful fallback strategies for systems where zsh is not available
+- Platform detection to determine available shell capabilities
+- Bash script compatibility across different target environments
 - Modular design for easy customization
 
 ## Deployment Model
