@@ -31,6 +31,27 @@ All scripts are developed here and executed on different target systems.
 - **Avoid clever one-liners** in favor of readable, maintainable code
 - **Provide examples** where concepts might be unclear
 
+### Fully Automated Execution
+- **Scripts must run without any human intervention**
+- **NO prompts for user input** during execution
+- **NO "press any key to continue"** or confirmation dialogs
+- **NO interactive menus** or option selection
+- **All decisions must be predetermined** in the script logic
+- **Purpose: Complete machine setup from start to finish automatically**
+- **If configuration options are needed**, use environment variables or config files, never prompts
+
+### Critical Design Requirement: Idempotency
+
+**ALL scripts and logic MUST be idempotent** - this is non-negotiable. Scripts must be capable of being executed multiple times without causing problems, duplications, or inconsistencies.
+
+#### Idempotency Requirements:
+- **Check before modifying** - verify if a change is needed before making it
+- **Never blindly append** to files without checking for existing content
+- **Test for existence** before creating files, directories, or settings
+- **Use conditional logic** to determine if action is needed
+- **Validate current state** before making any changes
+- **Ensure multiple executions** produce the same result every time
+
 ## Architecture and Structure
 
 ### Directory Organization
@@ -50,10 +71,26 @@ _examples/     # Reference: Other developers' dotfiles (trusted reference for le
 ```
 
 ### ⚠️ Important Reference Folder Warning
-- **`_archive/`** contains bloated, undocumented auto-generated code and should NOT be trusted
-- **`_legacy/`** contains working examples but uses outdated practices that conflict with current architecture
-- **`_examples/`** contains quality examples from other developers for learning techniques
-- **Do not copy code directly from any reference folders without understanding and adapting to current practices**
+
+#### _examples/alrra
+- **Fully functional working dotfiles project** compatible with macOS and Ubuntu
+- **Trusted reference** for learning techniques and patterns
+- **Uses source methodology** that we will NOT adopt (scripts source each other)
+- **Learn from it** but adapt to our main() function pattern
+
+#### _legacy
+- **Fully functional working dotfiles project** based on older version of _examples/alrra
+- **Targets multiple Ubuntu versions and WSL** in addition to macOS
+- **Currently in production use** but follows outdated practices
+- **Uses source methodology** that we will NOT adopt (not testable in isolation)
+- **Learn from it** but convert to self-contained scripts
+
+#### _archive
+- **Bloated, undocumented auto-generated code** - DO NOT TRUST OR COPY
+- Previous failed attempt at automation
+- Kept for reference of what NOT to do
+
+**Important**: While _examples/alrra and _legacy are functional projects we can learn from, they use a source-based approach where scripts source other scripts. We will NOT use this pattern as it makes scripts difficult to test in isolation. Instead, every script we create will have a self-contained main() function and be directly executable from the command line.
 
 ### Important Design Patterns
 
@@ -61,6 +98,8 @@ _examples/     # Reference: Other developers' dotfiles (trusted reference for le
 2. **Every script uses a main() function** - never source scripts, always execute directly
 3. **Scripts must check before modifying** - verify current state before making changes
 4. **Small, focused files** - keep scripts under 200 lines
+
+**Script Methodology**: Unlike the source-based approach in _examples/alrra and _legacy (where scripts source other scripts), our scripts are self-contained with a main() function. This makes each script testable in isolation and callable directly from the command line.
 
 ### Script Pattern Template
 
@@ -88,26 +127,41 @@ main "$@"
 
 ## Key Implementation Guidelines
 
-### Idempotency Examples
+### Idempotency Examples (CRITICAL)
 
 ```bash
-# BAD: Blindly appends (creates duplicates)
+# BAD: Blindly appends (creates duplicates on each run)
 echo "export PATH=$PATH:/new/path" >> ~/.bashrc
 
-# GOOD: Check if already present
+# GOOD: Check if already present before adding
 if ! grep -q "/new/path" ~/.bashrc; then
     echo "export PATH=$PATH:/new/path" >> ~/.bashrc
 fi
+
+# BAD: Always creates directory (may error if exists)
+mkdir ~/my-directory
+
+# GOOD: Check existence first
+if [ ! -d ~/my-directory ]; then
+    mkdir ~/my-directory
+fi
+
+# BETTER: Use mkdir -p (idempotent by design)
+mkdir -p ~/my-directory
 ```
+
+**Remember**: Users will run these scripts repeatedly. Every script must handle being run 1 time or 100 times with the same result.
 
 ### Platform Strategy
 
 - **Current Focus**: macOS only during initial development cycle
 - **Future Support**: Ubuntu, WSL, and Windows planned for future iterations
-- **Common Folder**: Targets shared functionality that works across different shell environments
-- **Platform Detection**: Scripts will detect available shell capabilities on target systems
-- **Adaptive Configurations**: Zsh configurations that work with different versions across platforms
-- **Fallback Strategies**: Graceful handling for systems where zsh is not available
+- **Independent Implementations**: Each platform has its own complete, self-contained scripts
+- **Code Duplication is Acceptable**: We prioritize simplicity over DRY principles
+- **No Adaptive Configurations**: Each platform folder contains platform-specific versions of all scripts
+- **No Dynamic Platform Detection**: Scripts are written specifically for their target OS
+- **Common Folder**: Limited to truly universal functionality with no OS-specific behavior
+- **Software Installation**: Tools like Vim, Node.js installed per-platform with OS-specific methods
 
 ## Repository Commands
 

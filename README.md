@@ -43,7 +43,13 @@ The source directory is organized by platform specificity:
 
 #### Platform Strategy
 
-The common folder targets shared functionality that works across different shell environments. While zsh is the preferred interactive shell, we work with whatever shell interpreter ships with each target environment. All automation scripts are written in bash regardless of the interactive shell. Platform-specific implementations may be needed where shell capabilities or availability differ significantly.
+Each platform (macOS, Ubuntu, WSL, Windows) has its own independent folder with complete, self-contained scripts. We intentionally duplicate code across platforms for simplicity - avoiding complex conditional logic and dynamic platform detection. This means:
+
+- **No adaptive configurations** - each platform has its own version of every script
+- **Code duplication is acceptable** - identical code may exist in multiple platform folders
+- **Platform-specific implementations** - each OS handles its own installation and configuration
+- **Common folder is limited** - only truly universal functionality that requires no OS-specific behavior
+- **Simplicity over DRY** - we prioritize maintainability and clarity over avoiding duplication
 
 #### Repository Scripts (`scripts/`)
 
@@ -59,15 +65,31 @@ The scripts folder contains repository maintenance utilities:
 
 The following directories contain reference materials that can be learned from but follow different practices than this project:
 
-- **`_legacy/`** - Current production dotfiles (trusted but outdated practices)
-- **`_archive/`** - Previous attempt at dotfiles automation (auto-generated, undocumented - do not trust)
-- **`_examples/`** - Collection of other developers' dotfiles (trusted reference for learning techniques)
+#### _examples/alrra
+- **Fully functional working dotfiles project** compatible with macOS and Ubuntu
+- **Trusted reference** for learning techniques and patterns  
+- **Uses source methodology** where scripts source other scripts (we will NOT adopt this pattern)
+- Can be deployed and used as-is on target systems
+- We will learn from this project and adapt its concepts to our architecture
 
-> ⚠️ **Important**: 
-> - **`_archive/`** contains bloated, undocumented auto-generated code and should not be trusted
-> - **`_legacy/`** contains working examples but uses outdated practices that conflict with current architecture
-> - **`_examples/`** contains quality examples from other developers for learning techniques
-> - Do not copy code directly from any reference folders without understanding and adapting to current practices
+#### _legacy
+- **Fully functional working dotfiles project** currently in production use
+- Based on an older version of _examples/alrra
+- **Targets multiple Ubuntu versions and WSL** in addition to macOS
+- **Uses source methodology** that makes scripts difficult to test in isolation
+- Contains working examples but follows outdated practices that conflict with current architecture
+
+#### _archive
+- Previous attempt at dotfiles automation (auto-generated, undocumented)
+- **DO NOT TRUST** - contains bloated, undocumented code
+- Kept for reference of what NOT to do
+
+> ⚠️ **Important Script Methodology Difference**:
+> - **_examples/alrra and _legacy use source-based scripts** where files source each other
+> - **We will NOT use this pattern** as it makes scripts difficult to test in isolation
+> - **Our approach**: Every script contains a self-contained main() function and is directly executable
+> - While we learn from and adapt code from these references, we will restructure it to follow our patterns
+> - Do not copy code directly without understanding and adapting to our main() function architecture
 
 ## Development Philosophy
 
@@ -78,18 +100,21 @@ The following directories contain reference materials that can be learned from b
 - Manual review and understanding of all configurations
 
 ### Design Principles
-- Each script must be idempotent (can be run multiple times safely)
+- **Each script MUST be idempotent** (can be run multiple times safely) - THIS IS CRITICAL
 - Use the shell interpreter that ships with the target environment (never install/upgrade shells)
 - Comprehensive documentation for all configurations
 - Small, focused files (< 200 lines)
 - No installation of packages during development (this repo is for deployment elsewhere)
+- **Scripts must run without human intervention** (no prompts, no confirmations, fully automated)
+- **Write for junior developer comprehension** (clear variable names, explanatory comments, avoid clever one-liners)
+- **Every script uses a main() function** - self-contained and directly executable
 
 ### Future Considerations
-- Adaptive zsh configurations that work with different versions across platforms
-- Graceful fallback strategies for systems where zsh is not available
-- Platform detection to determine available shell capabilities
-- Bash script compatibility across different target environments
-- Modular design for easy customization
+- Separate, independent implementations for each supported platform
+- WSL and Windows support with their own dedicated script folders
+- Common software tools (Vim, Node.js, etc.) installed per-platform with OS-specific methods
+- Each platform folder contains complete, self-contained setup scripts
+- Modular design for easy customization within each platform
 
 ## Deployment Model
 
@@ -101,6 +126,8 @@ cd ~/dotfiles
 # Execute setup scripts (to be implemented)
 ```
 
+**Important**: Setup scripts will run completely unattended - no user interaction required. The goal is to configure a new machine from start to finish without prompts or manual intervention.
+
 ### Update Workflow
 
 The intended workflow supports continuous improvement through regular updates:
@@ -111,7 +138,8 @@ The intended workflow supports continuous improvement through regular updates:
 
 ## Critical Design Requirement: Idempotency
 
-**All scripts and configurations must be idempotent** - capable of being executed multiple times without causing problems or inconsistencies.
+### ⚠️ THIS IS NON-NEGOTIABLE
+**ALL scripts and configurations MUST be idempotent** - capable of being executed multiple times without causing problems, duplications, or inconsistencies. Users will run `git pull` and re-execute scripts repeatedly. Every script must produce the same result whether run once or a hundred times.
 
 ### Implementation Guidelines
 
@@ -120,20 +148,37 @@ The intended workflow supports continuous improvement through regular updates:
 - **Verify current state** before making changes
 - **Use conditional logic** to determine if action is needed
 - **Validate** that multiple executions produce the same result
+- **Test for existence** before creating files, directories, or settings
 
 ### Examples of Idempotent Patterns
 
 ```bash
-# BAD: Blindly appends (creates duplicates)
+# BAD: Blindly appends (creates duplicates on each run)
 echo "export PATH=$PATH:/new/path" >> ~/.bashrc
 
-# GOOD: Check if already present
+# GOOD: Check if already present before adding
 if ! grep -q "/new/path" ~/.bashrc; then
     echo "export PATH=$PATH:/new/path" >> ~/.bashrc
 fi
 
-# GOOD: Use tools that handle duplicates
-# (Implementation details to be added as project develops)
+# BAD: Always creates directory (may error if exists)
+mkdir ~/my-directory
+
+# GOOD: Check existence first
+if [ ! -d ~/my-directory ]; then
+    mkdir ~/my-directory
+fi
+
+# BETTER: Use mkdir -p (idempotent by design)
+mkdir -p ~/my-directory
+
+# BAD: Always installs package (may fail or cause issues)
+brew install git
+
+# GOOD: Check if already installed
+if ! command -v git &> /dev/null; then
+    brew install git
+fi
 ```
 
 ## Getting Started
