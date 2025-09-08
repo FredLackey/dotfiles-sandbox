@@ -1,16 +1,26 @@
 # Dotfiles
 
-A fresh approach to dotfiles configuration for macOS and Ubuntu systems.
+A fresh approach to dotfiles configuration for three specific target environments.
 
 ## Overview
 
 This repository represents a new dotfiles effort designed to replace the current dotfiles setup with a more thoughtful, documented, and maintainable approach.
 
+### Target Environments
+
+Currently supported environments:
+1. **Windows WSL running Ubuntu** - Windows Subsystem for Linux with Ubuntu distribution
+2. **Ubuntu Server 22.04 LTS** - Standalone Ubuntu server installations  
+3. **macOS 15 (Sequoia)** - Current macOS desktop systems
+
+Future platforms (planned after initial three are complete):
+- **RHEL (Red Hat Enterprise Linux)** - Enterprise Linux distributions
+- **AWS Linux** - Amazon's Linux distribution for EC2 instances
+
 ### Architecture
 
 - **Interactive Shell**: ZShell (zsh) is the preferred target environment, using the version that ships with the system
 - **Scripting Language**: Bash for all automation and setup scripts
-- **Target Platforms**: macOS (current focus), WSL, Windows, and Ubuntu (future)
 - **Shell Philosophy**: Never install or upgrade shell interpreters - work with what's already available
 
 ## Project Structure
@@ -43,13 +53,15 @@ The source directory is organized by platform specificity:
 
 #### Platform Strategy
 
-Each platform (macOS, Ubuntu, WSL, Windows) has its own independent folder with complete, self-contained scripts. We intentionally duplicate code across platforms for simplicity - avoiding complex conditional logic and dynamic platform detection. This means:
+Each of our three target platforms has its own independent folder with complete, self-contained scripts. We intentionally duplicate code across platforms for simplicity - avoiding complex conditional logic and dynamic platform detection. This means:
 
-- **No adaptive configurations** - each platform has its own version of every script
+- **Single entry point** - `src/setup.sh` is the only script that detects the platform
+- **No other adaptive configurations** - each platform has its own version of every script
 - **Code duplication is acceptable** - identical code may exist in multiple platform folders
 - **Platform-specific implementations** - each OS handles its own installation and configuration
 - **Common folder is limited** - only truly universal functionality that requires no OS-specific behavior
 - **Simplicity over DRY** - we prioritize maintainability and clarity over avoiding duplication
+- **WSL-specific considerations** - WSL Ubuntu may have unique scripts for Windows interoperability
 
 #### Repository Scripts (`scripts/`)
 
@@ -94,10 +106,10 @@ The following directories contain reference materials that can be learned from b
 ## Development Philosophy
 
 ### Current Focus
-- **macOS only** during initial development cycle
-- Ubuntu support planned for future iterations
+- **Three target environments**: Windows WSL Ubuntu, Ubuntu Server 22.04 LTS, macOS 15
 - Clean, documented, and maintainable code
 - Manual review and understanding of all configurations
+- Platform-specific implementations for each environment
 
 ### Design Principles
 - **Each script MUST be idempotent** (can be run multiple times safely) - THIS IS CRITICAL
@@ -109,22 +121,36 @@ The following directories contain reference materials that can be learned from b
 - **Write for junior developer comprehension** (clear variable names, explanatory comments, avoid clever one-liners)
 - **Every script uses a main() function** - self-contained and directly executable
 
-### Future Considerations
-- Separate, independent implementations for each supported platform
-- WSL and Windows support with their own dedicated script folders
+### Implementation Considerations
+- Separate, independent implementations for each of the three target platforms
+- WSL Ubuntu may require special handling for Windows filesystem integration
 - Common software tools (Vim, Node.js, etc.) installed per-platform with OS-specific methods
 - Each platform folder contains complete, self-contained setup scripts
 - Modular design for easy customization within each platform
+- Ubuntu Server and WSL Ubuntu may share some scripts but remain in separate folders for clarity
 
 ## Deployment Model
 
-This repository is designed to be cloned directly onto the target machine and executed locally:
+This repository uses a one-liner installation that automatically downloads and executes the setup:
 
+### macOS Installation
 ```bash
-git clone <repository-url> ~/dotfiles
-cd ~/dotfiles
-# Execute setup scripts (to be implemented)
+bash -c "$(curl -LsS https://raw.github.com/fredlackey/dotfiles-sandbox/main/src/setup.sh)"
 ```
+
+### Ubuntu/WSL Installation
+```bash
+bash -c "$(wget -qO - https://raw.github.com/fredlackey/dotfiles-sandbox/main/src/setup.sh)"
+```
+
+The setup script will:
+1. Download the repository as a tarball (no git required)
+2. Extract the archive to `~/dotfiles` 
+3. Detect your operating system (macOS, Ubuntu Server, or WSL)
+4. Install git and other essential tools
+5. Initialize the extracted folder as a git repository for future updates
+6. Execute the appropriate platform-specific setup
+7. Configure your entire system without any prompts or manual intervention
 
 **Important**: Setup scripts will run completely unattended - no user interaction required. The goal is to configure a new machine from start to finish without prompts or manual intervention.
 
@@ -133,8 +159,8 @@ cd ~/dotfiles
 The intended workflow supports continuous improvement through regular updates:
 
 1. **Update**: `git pull` to get the latest changes
-2. **Execute**: Run setup scripts to apply new configurations
-3. **Repeat**: This process can be repeated unlimited times safely
+2. **Execute**: Run `src/setup.sh` to apply new configurations
+3. **Repeat**: This process can be repeated unlimited times safely (idempotent execution)
 
 ## Critical Design Requirement: Idempotency
 

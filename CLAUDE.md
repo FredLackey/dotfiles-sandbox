@@ -4,7 +4,20 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository Overview
 
-This is a dotfiles configuration repository for macOS and Ubuntu systems. The repository is designed for **development only** - scripts are written here and deployed to target systems separately.
+This is a dotfiles configuration repository designed for **development only** - scripts are written here and deployed to target systems separately.
+
+### Target Environments
+
+Currently targeting three environments:
+1. **Windows WSL running Ubuntu** - Windows Subsystem for Linux with Ubuntu distribution
+2. **Ubuntu Server 22.04 LTS** - Standalone Ubuntu server installations
+3. **macOS 15 (Sequoia)** - Current macOS desktop systems
+
+Future platforms (to be added after initial three are complete):
+- **RHEL (Red Hat Enterprise Linux)** - Enterprise Linux distributions
+- **AWS Linux** - Amazon's Linux distribution for EC2 instances
+
+Each environment has its own specific requirements, shell versions, and system utilities that must be accounted for in platform-specific implementations.
 
 ### Shell Philosophy
 - **Interactive Shell**: ZShell (zsh) is the preferred target environment, using the version that ships with the system
@@ -123,7 +136,7 @@ main "$@"
 1. Write scripts that will install/configure on target systems
 2. Use conditional logic to ensure idempotency
 3. Document what scripts will do when deployed
-4. Scripts will be executed via `git clone` on target systems
+4. Scripts will be executed via one-liner commands on target systems
 
 ## Key Implementation Guidelines
 
@@ -154,14 +167,21 @@ mkdir -p ~/my-directory
 
 ### Platform Strategy
 
-- **Current Focus**: macOS only during initial development cycle
-- **Future Support**: Ubuntu, WSL, and Windows planned for future iterations
+- **Current Target Platforms**: 
+  - Windows WSL running Ubuntu
+  - Ubuntu Server 22.04 LTS
+  - macOS 15 (Sequoia)
+- **Future Platforms** (after initial three are complete):
+  - RHEL (Red Hat Enterprise Linux)
+  - AWS Linux
 - **Independent Implementations**: Each platform has its own complete, self-contained scripts
 - **Code Duplication is Acceptable**: We prioritize simplicity over DRY principles
 - **No Adaptive Configurations**: Each platform folder contains platform-specific versions of all scripts
-- **No Dynamic Platform Detection**: Scripts are written specifically for their target OS
+- **Single Entry Point with Detection**: Only `src/setup.sh` performs platform detection to route to the correct platform folder
+- **No Other Dynamic Platform Detection**: All other scripts are written specifically for their target OS
 - **Common Folder**: Limited to truly universal functionality with no OS-specific behavior
 - **Software Installation**: Tools like Vim, Node.js installed per-platform with OS-specific methods
+- **WSL Considerations**: WSL Ubuntu scripts may need special handling for Windows interop features
 
 ## Repository Commands
 
@@ -172,11 +192,26 @@ Currently, this is a development repository with no build or test commands. Scri
 
 ## Deployment Model
 
-Target systems will:
+Target systems will use a one-liner installation:
+
+**macOS:**
 ```bash
-git clone <repository-url> ~/dotfiles
-cd ~/dotfiles
-# Execute platform-specific setup scripts
+bash -c "$(curl -LsS https://raw.github.com/fredlackey/dotfiles-sandbox/main/src/setup.sh)"
 ```
 
-Updates are applied via `git pull` followed by re-running setup scripts.
+**Ubuntu/WSL:**
+```bash
+bash -c "$(wget -qO - https://raw.github.com/fredlackey/dotfiles-sandbox/main/src/setup.sh)"
+```
+
+The setup script will automatically:
+1. Download the repository as a tarball (no git required initially)
+2. Extract the archive to `~/dotfiles` using built-in tar command
+3. Detect the operating system
+4. Install git and other essential tools via platform package managers
+5. Initialize the extracted folder as a git repository for future updates
+6. Execute the appropriate platform-specific setup
+
+Updates are applied via `git pull` followed by re-running `src/setup.sh`.
+- The repo will be hosted at https://github.com/FredLackey/dotfiles-sandbox during development.  Once perfected it will be replace the existing repo at https://github.com/FredLackey/dotfiles
+- If any part of the scripts fail during installation a failure should be reported and processing stop.
