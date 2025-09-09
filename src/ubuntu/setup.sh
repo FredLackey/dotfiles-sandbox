@@ -258,26 +258,142 @@ configure_system() {
     fi
 }
 
-# Configure shell environment (foundation for text-based development)
-configure_shell() {
-    print_title "Shell Environment"
+# Install and configure ZSH
+install_zsh() {
+    print_title "ZSH Installation"
     
-    # Install and configure ZSH
-    if [ -f "$SCRIPT_DIR/steps/setup-zsh.sh" ]; then
-        bash "$SCRIPT_DIR/steps/setup-zsh.sh" || {
-            print_warning "ZSH setup encountered issues but continuing"
-        }
+    if check_command zsh; then
+        local current_version=$(zsh --version 2>/dev/null | awk '{print $2}')
+        print_success "ZSH already installed (version $current_version)"
+        
+        # Update to latest version if available
+        execute \
+            "sudo apt-get install -qqy --only-upgrade zsh" \
+            "Checking for ZSH updates"
     else
-        print_warning "ZSH setup script not found"
+        # Install ZSH
+        execute \
+            "sudo apt-get install -qqy zsh" \
+            "Installing ZSH"
+        
+        # Verify installation
+        if check_command zsh; then
+            local version=$(zsh --version 2>/dev/null | awk '{print $2}')
+            print_success "ZSH installed successfully (version $version)"
+        else
+            print_error "Failed to install ZSH"
+            return 1
+        fi
     fi
     
-    # Future configurations will include:
-    # - Oh My Zsh framework
-    # - Additional shell enhancements
-    # - Custom aliases and functions
-    # - Advanced prompt themes
+    # Ensure ZSH is in /etc/shells
+    local zsh_path=$(which zsh 2>/dev/null)
+    if [ -n "$zsh_path" ]; then
+        if ! grep -q "^$zsh_path$" /etc/shells 2>/dev/null; then
+            execute \
+                "echo '$zsh_path' | sudo tee -a /etc/shells > /dev/null" \
+                "Adding ZSH to /etc/shells"
+        else
+            print_success "ZSH already in /etc/shells"
+        fi
+    fi
+}
+
+# Configure shell environment (foundation for text-based development)
+configure_shell() {
+    print_title "Shell Environment Configuration"
     
-    print_info "Additional shell configurations (coming soon)"
+    # Install ZSH first
+    install_zsh || {
+        print_warning "ZSH installation failed, continuing with existing shell"
+        return 0
+    }
+    
+    # Copy ZSH configuration files from templates
+    local zsh_configs_dir="$SCRIPT_DIR/configs/zsh"
+    
+    if [ -d "$zsh_configs_dir" ]; then
+        # Copy main configuration files
+        for config_file in .zshenv .zprofile .zshrc; do
+            if [ -f "$zsh_configs_dir/$config_file" ]; then
+                if [ ! -f "$HOME/$config_file" ]; then
+                    execute \
+                        "cp '$zsh_configs_dir/$config_file' '$HOME/$config_file'" \
+                        "Installing $config_file"
+                else
+                    print_success "$config_file already exists (preserving)"
+                fi
+            fi
+        done
+        
+        # Create and populate .zshrc.d directory
+        if [ ! -d "$HOME/.zshrc.d" ]; then
+            execute \
+                "mkdir -p '$HOME/.zshrc.d'" \
+                "Creating ~/.zshrc.d directory"
+        fi
+        
+        # Copy modular configuration files
+        if [ -d "$zsh_configs_dir/.zshrc.d" ]; then
+            for module in "$zsh_configs_dir/.zshrc.d"/*.zsh; do
+                if [ -f "$module" ]; then
+                    local basename=$(basename "$module")
+                    if [ ! -f "$HOME/.zshrc.d/$basename" ]; then
+                        execute \
+                            "cp '$module' '$HOME/.zshrc.d/$basename'" \
+                            "Installing $basename"
+                    else
+                        print_success "$basename already exists (preserving)"
+                    fi
+                fi
+            done
+        fi
+    else
+        print_warning "ZSH config templates not found at $zsh_configs_dir"
+    fi
+    
+    # Handle WSL-specific configuration
+    if [ -f /proc/version ] && grep -qi "microsoft\|wsl" /proc/version; then
+        print_info "WSL environment detected"
+        
+        # Add ZSH launcher to .bashrc for older WSL versions
+        if [ -f "$HOME/.bashrc" ]; then
+            if ! grep -q "exec zsh" "$HOME/.bashrc" 2>/dev/null; then
+                cat >> "$HOME/.bashrc" << 'EOF'
+
+# Launch ZSH if in interactive terminal (WSL compatibility)
+if test -t 1; then
+    exec zsh
+fi
+EOF
+                print_success "Added ZSH launcher to ~/.bashrc for WSL"
+            fi
+        fi
+    fi
+    
+    # Set ZSH as default shell
+    local zsh_path=$(which zsh 2>/dev/null)
+    if [ -n "$zsh_path" ] && [ "$SHELL" != "$zsh_path" ]; then
+        # Check if chsh command exists
+        if ! check_command chsh; then
+            execute \
+                "sudo apt-get install -qqy passwd" \
+                "Installing passwd package for chsh"
+        fi
+        
+        # Change default shell
+        if execute "sudo chsh -s '$zsh_path' '$USER'" "Setting ZSH as default shell"; then
+            print_info "Shell change will take effect on next login"
+        else
+            print_warning "Failed to set default shell automatically"
+            print_info "You can manually set it with: chsh -s $zsh_path"
+        fi
+    else
+        print_success "ZSH is already the default shell"
+    fi
+    
+    print_success "Shell environment configured"
+    print_info "Future additions: Oh My Zsh, advanced themes, additional plugins"
 }
 
 # Install text-based development environment (primary focus)
