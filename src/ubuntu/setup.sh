@@ -3,8 +3,8 @@
 # Ubuntu Server-specific setup script for dotfiles
 # This script configures an Ubuntu Server 22.04 LTS system for full-stack development
 
-# Exit on any error
-set -e
+# Don't exit on error - we want to continue even if some components fail
+# set -e  # Disabled to allow partial installations
 
 # Configuration
 DOTFILES_DIR="$HOME/dotfiles"
@@ -882,22 +882,24 @@ install_programming_tools() {
     print_title "Programming Languages & Tools"
     
     # Install Node.js and npm
-    install_nodejs
+    install_nodejs || print_warning "Node.js installation had issues, continuing..."
     
     # Install Java development tools
-    install_java
+    install_java || print_warning "Java installation had issues, continuing..."
     
     # Install Python development tools
-    install_python_dev
+    install_python_dev || print_warning "Python tools installation had issues, continuing..."
     
     # Install Docker (for containerized development)
-    install_docker
+    install_docker || print_warning "Docker installation had issues, continuing..."
     
     # Install build tools
-    install_build_tools
+    install_build_tools || print_warning "Build tools installation had issues, continuing..."
     
     # Install LSP servers for IDE functionality
-    install_lsp_servers
+    install_lsp_servers || print_warning "LSP servers installation had issues, continuing..."
+    
+    return 0
 }
 
 # Install Node.js and npm
@@ -990,8 +992,11 @@ install_python_dev() {
     # Python3 should already be installed, but ensure pip is available
     if ! check_command pip3; then
         execute \
-            "sudo apt-get install -qqy python3-pip" \
-            "Installing pip3"
+            "sudo apt-get update -qq && sudo apt-get install -qqy python3-pip" \
+            "Installing pip3" || {
+                print_warning "Failed to install pip3, continuing..."
+                return 0
+            }
     else
         print_success "pip3 already installed"
     fi
@@ -999,24 +1004,36 @@ install_python_dev() {
     # Install Python development packages
     execute \
         "sudo apt-get install -qqy python3-dev python3-venv" \
-        "Installing Python development packages"
+        "Installing Python development packages" || {
+            print_warning "Failed to install Python dev packages, continuing..."
+        }
     
-    # Install common Python tools
-    if ! pip3 show black >/dev/null 2>&1; then
-        execute \
-            "pip3 install --user black" \
-            "Installing Black formatter"
+    # Install common Python tools (only if pip3 is available)
+    if check_command pip3; then
+        if ! pip3 show black >/dev/null 2>&1; then
+            execute \
+                "pip3 install --user --break-system-packages black 2>/dev/null || pip3 install --user black" \
+                "Installing Black formatter" || {
+                    print_warning "Failed to install Black formatter"
+                }
+        else
+            print_success "Black formatter already installed"
+        fi
+        
+        if ! pip3 show pylint >/dev/null 2>&1; then
+            execute \
+                "pip3 install --user --break-system-packages pylint 2>/dev/null || pip3 install --user pylint" \
+                "Installing Pylint" || {
+                    print_warning "Failed to install Pylint"
+                }
+        else
+            print_success "Pylint already installed"
+        fi
     else
-        print_success "Black formatter already installed"
+        print_warning "pip3 not available, skipping Python tool installation"
     fi
     
-    if ! pip3 show pylint >/dev/null 2>&1; then
-        execute \
-            "pip3 install --user pylint" \
-            "Installing Pylint"
-    else
-        print_success "Pylint already installed"
-    fi
+    return 0
 }
 
 # Install Docker
