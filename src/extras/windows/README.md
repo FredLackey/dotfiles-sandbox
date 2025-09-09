@@ -29,7 +29,7 @@ This directory contains PowerShell scripts that automate the installation and co
 - **Maven** - Java project management and build tool
 - **Gradle** - Modern build automation tool
 - **Make** - GNU Make for build automation
-- **IntelliJ IDEA Ultimate** - Professional Java IDE with enterprise features
+- **IntelliJ IDEA Ultimate** - Professional Java IDE with enterprise features (requires license)
 
 ### Container & Cloud Tools
 - **Docker Desktop** - Container platform for Windows

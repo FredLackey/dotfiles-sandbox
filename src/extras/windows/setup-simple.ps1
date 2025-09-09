@@ -88,16 +88,26 @@ function InstallPackage([string]$name, [string]$displayName) {
     # Check if already installed via choco
     $list = choco list --local-only 2>&1
     if ($list -match $name) {
-        WriteSuccess "$displayName is already installed"
+        WriteSuccess "$displayName is already installed via Chocolatey"
         return
     }
     
     WriteInfo "Installing $displayName..."
     $result = choco install $name -y --no-progress --ignore-checksums 2>&1
-    if ($LASTEXITCODE -eq 0) {
+    
+    # Check various success conditions
+    $successCodes = @(0, 3010, 1641)
+    if ($LASTEXITCODE -in $successCodes) {
         WriteSuccess "$displayName installed"
+    } elseif ($result -match "already installed") {
+        WriteSuccess "$displayName was already installed"
     } else {
-        WriteError "Failed to install $displayName"
+        WriteError "Failed to install $displayName (exit code: $LASTEXITCODE)"
+        # Show first few lines of error
+        $errorLines = $result | Select-Object -First 3
+        foreach ($line in $errorLines) {
+            Write-Host "     $line" -ForegroundColor DarkRed
+        }
     }
 }
 
@@ -139,7 +149,31 @@ if (-not $Minimal) {
     InstallPackage "openjdk17" "OpenJDK 17"
     InstallPackage "maven" "Maven"
     InstallPackage "gradle" "Gradle"
-    InstallPackage "intellijidea-ultimate" "IntelliJ IDEA Ultimate"
+    
+    # IntelliJ IDEA Ultimate - Special handling for commercial software
+    WriteInfo "Checking for IntelliJ IDEA Ultimate..."
+    $ideaInstalled = $false
+    
+    # Check common installation paths
+    $ideaPaths = @(
+        "$env:ProgramFiles\JetBrains\IntelliJ IDEA*",
+        "${env:ProgramFiles(x86)}\JetBrains\IntelliJ IDEA*",
+        "$env:LocalAppData\JetBrains\Toolbox\apps\IDEA-U*"
+    )
+    
+    foreach ($path in $ideaPaths) {
+        if (Test-Path $path) {
+            $ideaInstalled = $true
+            break
+        }
+    }
+    
+    if ($ideaInstalled) {
+        WriteSuccess "IntelliJ IDEA Ultimate is already installed"
+    } else {
+        InstallPackage "intellijidea-ultimate" "IntelliJ IDEA Ultimate"
+        WriteInfo "Note: IntelliJ IDEA Ultimate requires a license. You'll need to activate it on first run."
+    }
     
     # .NET Tools
     WriteTitle ".NET Development Stack"

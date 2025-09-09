@@ -193,7 +193,7 @@ function main() {
         'openjdk17' = 'java -version'
         'maven' = 'mvn --version'
         'gradle' = 'gradle --version'
-        'intellijidea-ultimate' = 'Test-Path ($env:ProgramFiles + "\JetBrains\IntelliJ IDEA*\bin\idea64.exe")'
+        'intellijidea-ultimate' = 'if (Test-Path "$env:ProgramFiles\JetBrains") { @(Get-ChildItem -Path "$env:ProgramFiles\JetBrains" -Filter "IntelliJ IDEA*" -ErrorAction SilentlyContinue).Count -gt 0 } else { $false }'
         'dotnet-sdk' = 'dotnet --version'
         'docker-desktop' = 'docker --version'
         'mongodb' = 'mongod --version'
