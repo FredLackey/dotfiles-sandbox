@@ -81,34 +81,47 @@ choco feature enable -n allowGlobalConfirmation -y 2>&1 | Out-Null
 choco config set commandExecutionTimeoutSeconds 14400 2>&1 | Out-Null
 WriteSuccess "Chocolatey configured"
 
-# Function to install package
-function InstallPackage([string]$name, [string]$displayName) {
+# Function to install package with retry
+function InstallPackage([string]$name, [string]$displayName, [int]$maxRetries = 2) {
     if (-not $displayName) { $displayName = $name }
     
     # Check if already installed via choco
     $list = choco list --local-only 2>&1
     if ($list -match $name) {
         WriteSuccess "$displayName is already installed via Chocolatey"
-        return
+        return $true
     }
     
-    WriteInfo "Installing $displayName..."
-    $result = choco install $name -y --no-progress --ignore-checksums 2>&1
+    $retryCount = 0
+    $installed = $false
     
-    # Check various success conditions
-    $successCodes = @(0, 3010, 1641)
-    if ($LASTEXITCODE -in $successCodes) {
-        WriteSuccess "$displayName installed"
-    } elseif ($result -match "already installed") {
-        WriteSuccess "$displayName was already installed"
-    } else {
-        WriteError "Failed to install $displayName (exit code: $LASTEXITCODE)"
-        # Show first few lines of error
-        $errorLines = $result | Select-Object -First 3
-        foreach ($line in $errorLines) {
-            Write-Host "     $line" -ForegroundColor DarkRed
+    while ($retryCount -lt $maxRetries -and -not $installed) {
+        if ($retryCount -gt 0) {
+            WriteInfo "Retry attempt $retryCount for $displayName..."
+        } else {
+            WriteInfo "Installing $displayName..."
+        }
+        
+        $result = choco install $name -y --no-progress --ignore-checksums --force 2>&1
+        
+        # Check various success conditions
+        $successCodes = @(0, 3010, 1641)
+        if ($LASTEXITCODE -in $successCodes) {
+            WriteSuccess "$displayName installed"
+            $installed = $true
+        } elseif ($result -match "already installed") {
+            WriteSuccess "$displayName was already installed"
+            $installed = $true
+        } else {
+            $retryCount++
+            if ($retryCount -ge $maxRetries) {
+                WriteError "Failed to install $displayName after $maxRetries attempts"
+                return $false
+            }
+            Start-Sleep -Seconds 2
         }
     }
+    return $installed
 }
 
 # Install Core Tools
@@ -140,7 +153,13 @@ if (-not $Minimal) {
         if ($LASTEXITCODE -eq 0) {
             WriteSuccess "TypeScript installed"
         } else {
-            WriteError "TypeScript installation failed"
+            # Retry with force
+            npm install -g typescript --force 2>&1 | Out-Null
+            if ($LASTEXITCODE -eq 0) {
+                WriteSuccess "TypeScript installed (forced)"
+            } else {
+                WriteError "TypeScript installation failed"
+            }
         }
     }
     
@@ -150,29 +169,31 @@ if (-not $Minimal) {
     InstallPackage "maven" "Maven"
     InstallPackage "gradle" "Gradle"
     
-    # IntelliJ IDEA Ultimate - Special handling for commercial software
-    WriteInfo "Checking for IntelliJ IDEA Ultimate..."
-    $ideaInstalled = $false
+    # IntelliJ IDEA Ultimate - Handle specially
+    WriteInfo "Installing IntelliJ IDEA Ultimate..."
     
-    # Check common installation paths
-    $ideaPaths = @(
-        "$env:ProgramFiles\JetBrains\IntelliJ IDEA*",
-        "${env:ProgramFiles(x86)}\JetBrains\IntelliJ IDEA*",
-        "$env:LocalAppData\JetBrains\Toolbox\apps\IDEA-U*"
-    )
+    # First try the standard package
+    $ideaInstalled = InstallPackage "intellijidea-ultimate" "IntelliJ IDEA Ultimate" 3
     
-    foreach ($path in $ideaPaths) {
-        if (Test-Path $path) {
-            $ideaInstalled = $true
-            break
+    # If that fails, try alternative approaches
+    if (-not $ideaInstalled) {
+        WriteInfo "Trying alternative installation for IntelliJ IDEA Ultimate..."
+        
+        # Try with different parameters
+        $result = choco install intellijidea-ultimate -y --ignore-checksums --allow-empty-checksums --force 2>&1
+        if ($LASTEXITCODE -eq 0 -or $result -match "already installed") {
+            WriteSuccess "IntelliJ IDEA Ultimate installed via alternative method"
+        } else {
+            # Try the community edition as fallback
+            WriteWarning "IntelliJ IDEA Ultimate installation failed, installing Community Edition instead..."
+            $communityResult = choco install intellijidea-community -y --no-progress --ignore-checksums --force 2>&1
+            if ($LASTEXITCODE -eq 0 -or $communityResult -match "already installed") {
+                WriteSuccess "IntelliJ IDEA Community Edition installed as fallback"
+                WriteInfo "You can upgrade to Ultimate Edition later if needed"
+            } else {
+                WriteError "Could not install any version of IntelliJ IDEA"
+            }
         }
-    }
-    
-    if ($ideaInstalled) {
-        WriteSuccess "IntelliJ IDEA Ultimate is already installed"
-    } else {
-        InstallPackage "intellijidea-ultimate" "IntelliJ IDEA Ultimate"
-        WriteInfo "Note: IntelliJ IDEA Ultimate requires a license. You'll need to activate it on first run."
     }
     
     # .NET Tools
@@ -220,6 +241,9 @@ if (Get-Command npm -ErrorAction SilentlyContinue) {
     npm config set registry https://registry.npmjs.org/ 2>&1 | Out-Null
     WriteSuccess "npm configured with public registry"
 }
+
+# Refresh environment
+$env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
 
 # Final message
 WriteTitle "Setup Complete!"
