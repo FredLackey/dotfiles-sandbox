@@ -86,7 +86,7 @@ function InstallPackage([string]$name, [string]$displayName, [int]$maxRetries = 
     if (-not $displayName) { $displayName = $name }
     
     # Check if already installed via choco
-    $list = choco list --local-only 2>&1
+    $list = choco list --local-only 2>&1 | Out-String
     if ($list -match $name) {
         WriteSuccess "$displayName is already installed via Chocolatey"
         return $true
@@ -102,7 +102,7 @@ function InstallPackage([string]$name, [string]$displayName, [int]$maxRetries = 
             WriteInfo "Installing $displayName..."
         }
         
-        $result = choco install $name -y --no-progress --ignore-checksums --force 2>&1
+        $result = choco install $name -y --no-progress --ignore-checksums --force 2>&1 | Out-String
         
         # Check various success conditions
         $successCodes = @(0, 3010, 1641)
@@ -126,25 +126,25 @@ function InstallPackage([string]$name, [string]$displayName, [int]$maxRetries = 
 
 # Install Core Tools
 WriteTitle "Core Development Tools"
-InstallPackage "git" "Git"
-InstallPackage "vscode" "Visual Studio Code"
-InstallPackage "7zip" "7-Zip"
-InstallPackage "powershell-core" "PowerShell Core"
+$null = InstallPackage "git" "Git"
+$null = InstallPackage "vscode" "Visual Studio Code"
+$null = InstallPackage "7zip" "7-Zip"
+$null = InstallPackage "powershell-core" "PowerShell Core"
 
 # Windows Terminal special check
 $wt = Get-AppxPackage -Name Microsoft.WindowsTerminal -ErrorAction SilentlyContinue
 if ($wt) {
     WriteSuccess "Windows Terminal is already installed"
 } else {
-    InstallPackage "microsoft-windows-terminal" "Windows Terminal"
+    $null = InstallPackage "microsoft-windows-terminal" "Windows Terminal"
 }
 
 if (-not $Minimal) {
     # Node.js Tools
     WriteTitle "Node.js Development Stack"
-    InstallPackage "nodejs-lts" "Node.js LTS"
-    InstallPackage "yarn" "Yarn"
-    InstallPackage "pnpm" "pnpm"
+    $null = InstallPackage "nodejs-lts" "Node.js LTS"
+    $null = InstallPackage "yarn" "Yarn"
+    $null = InstallPackage "pnpm" "pnpm"
     
     # TypeScript via npm
     if (Get-Command npm -ErrorAction SilentlyContinue) {
@@ -165,9 +165,9 @@ if (-not $Minimal) {
     
     # Java Tools
     WriteTitle "Java Development Stack"
-    InstallPackage "openjdk17" "OpenJDK 17"
-    InstallPackage "maven" "Maven"
-    InstallPackage "gradle" "Gradle"
+    $null = InstallPackage "openjdk17" "OpenJDK 17"
+    $null = InstallPackage "maven" "Maven"
+    $null = InstallPackage "gradle" "Gradle"
     
     # IntelliJ IDEA Ultimate - Check architecture first
     WriteInfo "Checking system architecture for IntelliJ IDEA compatibility..."
@@ -192,13 +192,13 @@ if (-not $Minimal) {
             WriteInfo "Trying alternative installation for IntelliJ IDEA Ultimate..."
             
             # Try with different parameters
-            $result = choco install intellijidea-ultimate -y --ignore-checksums --allow-empty-checksums --force 2>&1
+            $result = choco install intellijidea-ultimate -y --ignore-checksums --allow-empty-checksums --force 2>&1 | Out-String
             if ($LASTEXITCODE -eq 0 -or $result -match "already installed") {
                 WriteSuccess "IntelliJ IDEA Ultimate installed via alternative method"
             } else {
                 # Try the community edition as fallback
                 WriteWarning "IntelliJ IDEA Ultimate installation failed, installing Community Edition instead..."
-                $communityResult = choco install intellijidea-community -y --no-progress --ignore-checksums --force 2>&1
+                $communityResult = choco install intellijidea-community -y --no-progress --ignore-checksums --force 2>&1 | Out-String
                 if ($LASTEXITCODE -eq 0 -or $communityResult -match "already installed") {
                     WriteSuccess "IntelliJ IDEA Community Edition installed as fallback"
                     WriteInfo "You can upgrade to Ultimate Edition later if needed"
@@ -211,33 +211,33 @@ if (-not $Minimal) {
     
     # .NET Tools
     WriteTitle ".NET Development Stack"
-    InstallPackage "dotnet-sdk" ".NET SDK"
+    $null = InstallPackage "dotnet-sdk" ".NET SDK"
     
     # Additional Tools
     WriteTitle "Additional Utilities"
-    InstallPackage "curl" "cURL"
-    InstallPackage "wget" "wget"
-    InstallPackage "jq" "jq"
-    InstallPackage "make" "Make"
-    InstallPackage "python" "Python"
-    InstallPackage "gh" "GitHub CLI"
+    $null = InstallPackage "curl" "cURL"
+    $null = InstallPackage "wget" "wget"
+    $null = InstallPackage "jq" "jq"
+    $null = InstallPackage "make" "Make"
+    $null = InstallPackage "python" "Python"
+    $null = InstallPackage "gh" "GitHub CLI"
     
     if (-not $SkipDocker) {
         WriteTitle "Container Tools"
-        InstallPackage "docker-desktop" "Docker Desktop"
+        $null = InstallPackage "docker-desktop" "Docker Desktop"
     }
     
     if (-not $SkipDatabases) {
         WriteTitle "Database Tools"
-        InstallPackage "mongodb" "MongoDB"
-        InstallPackage "postgresql" "PostgreSQL"
-        InstallPackage "dbeaver" "DBeaver"
+        $null = InstallPackage "mongodb" "MongoDB"
+        $null = InstallPackage "postgresql" "PostgreSQL"
+        $null = InstallPackage "dbeaver" "DBeaver"
     }
     
     # API Tools
     WriteTitle "API Development Tools"
-    InstallPackage "postman" "Postman"
-    InstallPackage "insomnia-rest-api-client" "Insomnia"
+    $null = InstallPackage "postman" "Postman"
+    $null = InstallPackage "insomnia-rest-api-client" "Insomnia"
 }
 
 # Post-installation
