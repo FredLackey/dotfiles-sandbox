@@ -298,7 +298,7 @@ initialize_git_repo() {
     cd "$DOTFILES_DIR"
     
     # Check if already a git repository
-    if git rev-parse &> /dev/null; then
+    if [ -d ".git" ]; then
         print_success "Git repository (already initialized)"
         
         # Check if remote origin exists
@@ -309,11 +309,36 @@ initialize_git_repo() {
         else
             print_success "Git remote origin (already configured)"
         fi
+        
+        # Set branch tracking
+        if ! git config branch.main.remote &>/dev/null; then
+            execute \
+                "git branch --set-upstream-to=origin/main main 2>/dev/null || true" \
+                "Setting branch tracking"
+        fi
     else
-        # Simple initialization
+        # Initialize new repository
         execute \
-            "git init && git remote add origin 'https://github.com/fredlackey/dotfiles-sandbox.git'" \
-            "Initialize Git repository"
+            "git init" \
+            "Initializing Git repository"
+        
+        # Add remote
+        execute \
+            "git remote add origin 'https://github.com/fredlackey/dotfiles-sandbox.git'" \
+            "Adding git remote origin"
+        
+        # Fetch from origin to establish connection
+        execute \
+            "git fetch origin main" \
+            "Fetching from remote repository"
+        
+        # Set main branch to track origin
+        execute \
+            "git branch --set-upstream-to=origin/main main 2>/dev/null || git checkout -b main --track origin/main 2>/dev/null || true" \
+            "Setting up branch tracking"
+        
+        print_info "Git repository initialized for future updates"
+        print_info "Use 'git pull' to get latest changes from GitHub"
     fi
     
     cd - >/dev/null
@@ -699,95 +724,133 @@ install_programming_tools() {
     return 0  # Always return success to continue
 }
 
-# Install Node.js
+# Install Node Version Manager (nvm) and Node.js
 install_nodejs() {
-    print_info "Installing Node.js..."
+    print_info "Installing Node Version Manager (nvm) and Node.js..."
     
     # Target Node.js version
     local NODE_VERSION="20"  # Node.js 20.x LTS
-    local MIN_NODE_MAJOR="20"
+    local NVM_VERSION="0.39.7"  # Latest stable nvm version
     
-    # Check if Node.js is already installed and get version
-    if check_command node; then
-        local current_version=$(node --version 2>/dev/null)
-        local current_major=$(echo "$current_version" | grep -oE '[0-9]+' | head -1)
+    # Remove any system-installed Node.js to avoid conflicts
+    if dpkg -l | grep -q "^ii  nodejs "; then
+        print_info "Removing system-installed Node.js to avoid conflicts with nvm..."
+        execute \
+            "sudo apt-get remove -qqy nodejs npm" \
+            "Removing system Node.js"
         
-        print_info "Current Node.js version: $current_version"
-        
-        # Check if we need to upgrade to Node.js 20
-        if [ "$current_major" -lt "$MIN_NODE_MAJOR" ]; then
-            print_info "Node.js version is below v20, upgrading..."
-            
-            # Remove old Node.js if installed via apt
-            execute \
-                "sudo apt-get remove -qqy nodejs npm" \
-                "Removing old Node.js version"
-            
-            # Clean up old nodejs sources
-            execute \
-                "sudo rm -f /etc/apt/sources.list.d/nodesource.list*" \
-                "Cleaning up old NodeSource repository"
-        else
-            print_success "Node.js $current_version is already v20 or higher"
-            
-            # Just update npm if Node.js is already v20+
-            if check_command npm; then
-                local npm_version=$(npm --version 2>/dev/null)
-                print_info "Current npm version: $npm_version"
-                
-                # Try to update npm, but don't fail if it errors
-                execute \
-                    "sudo npm install -g npm@latest 2>/dev/null || true" \
-                    "Attempting to update npm"
-            fi
-            return 0
-        fi
+        # Clean up old nodejs sources
+        execute \
+            "sudo rm -f /etc/apt/sources.list.d/nodesource.list*" \
+            "Cleaning up NodeSource repository"
     fi
     
-    # Add NodeSource repository for Node.js 20
-    print_info "Setting up NodeSource repository for Node.js v${NODE_VERSION}..."
-    execute \
-        "curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION}.x | sudo -E bash -" \
-        "Adding NodeSource repository"
-    
-    # Install Node.js
-    execute \
-        "sudo apt-get install -qqy nodejs" \
-        "Installing Node.js v${NODE_VERSION}"
-    
-    # Verify installation
-    if check_command node && check_command npm; then
-        local node_version=$(node --version 2>/dev/null)
-        local npm_version=$(npm --version 2>/dev/null)
-        print_success "Node.js $node_version and npm $npm_version installed"
+    # Install nvm
+    if [ ! -d "$HOME/.nvm" ]; then
+        print_info "Installing Node Version Manager (nvm)..."
         
-        # Update npm to latest compatible version
+        # Download and install nvm
         execute \
-            "sudo npm install -g npm@latest 2>/dev/null || true" \
-            "Updating npm to latest version"
+            "curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v${NVM_VERSION}/install.sh | bash" \
+            "Installing nvm"
+        
+        # Source nvm for current session
+        export NVM_DIR="$HOME/.nvm"
+        [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+        [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
     else
-        print_error "Failed to install Node.js"
+        print_success "nvm already installed"
+        
+        # Source nvm for current session
+        export NVM_DIR="$HOME/.nvm"
+        [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+        [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
+    fi
+    
+    # Add nvm to shell configs if not already present
+    configure_nvm_in_shells
+    
+    # Install Node.js using nvm
+    if [ -s "$NVM_DIR/nvm.sh" ]; then
+        print_info "Installing Node.js v${NODE_VERSION} using nvm..."
+        
+        # Install the specified Node version
+        execute \
+            "nvm install ${NODE_VERSION}" \
+            "Installing Node.js v${NODE_VERSION}"
+        
+        # Use the installed version
+        execute \
+            "nvm use ${NODE_VERSION}" \
+            "Activating Node.js v${NODE_VERSION}"
+        
+        # Set as default
+        execute \
+            "nvm alias default ${NODE_VERSION}" \
+            "Setting Node.js v${NODE_VERSION} as default"
+        
+        # Verify installation
+        if command -v node >/dev/null 2>&1; then
+            local node_version=$(node --version 2>/dev/null)
+            local npm_version=$(npm --version 2>/dev/null)
+            print_success "Node.js $node_version and npm $npm_version installed via nvm"
+        else
+            print_error "Failed to install Node.js via nvm"
+            return 1
+        fi
+    else
+        print_error "nvm installation failed"
         return 1
     fi
     
-    # Install common global npm packages
+    # Install common global npm packages (without sudo since nvm manages this)
     local npm_packages=(
         "typescript"
         "ts-node"
         "nodemon"
         "prettier"
         "eslint"
+        "yarn"
+        "pnpm"
     )
     
+    print_info "Installing global npm packages..."
     for package in "${npm_packages[@]}"; do
         if npm list -g "$package" &>/dev/null; then
             print_success "$package (already installed globally)"
         else
             execute \
-                "sudo npm install -g '$package'" \
+                "npm install -g '$package'" \
                 "Installing $package globally"
         fi
     done
+}
+
+# Configure nvm in shell configuration files
+configure_nvm_in_shells() {
+    local nvm_init='export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
+[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion'
+    
+    # Add to .bashrc if not present
+    if [ -f "$HOME/.bashrc" ]; then
+        if ! grep -q "NVM_DIR" "$HOME/.bashrc"; then
+            echo "" >> "$HOME/.bashrc"
+            echo "# Node Version Manager (nvm)" >> "$HOME/.bashrc"
+            echo "$nvm_init" >> "$HOME/.bashrc"
+            print_success "Added nvm to .bashrc"
+        fi
+    fi
+    
+    # Add to .zshrc if present
+    if [ -f "$HOME/.zshrc" ]; then
+        if ! grep -q "NVM_DIR" "$HOME/.zshrc"; then
+            echo "" >> "$HOME/.zshrc"
+            echo "# Node Version Manager (nvm)" >> "$HOME/.zshrc"
+            echo "$nvm_init" >> "$HOME/.zshrc"
+            print_success "Added nvm to .zshrc"
+        fi
+    fi
 }
 
 # Install Java
@@ -987,11 +1050,15 @@ install_build_tools() {
 install_lsp_servers() {
     print_title "LSP Servers Installation"
     
-    # TypeScript/JavaScript LSP
+    # Source nvm for this function
+    export NVM_DIR="$HOME/.nvm"
+    [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+    
+    # TypeScript/JavaScript LSP (no sudo needed with nvm)
     if check_command npm; then
         if ! npm list -g typescript-language-server &>/dev/null; then
             execute \
-                "sudo npm install -g typescript-language-server typescript" \
+                "npm install -g typescript-language-server typescript" \
                 "Installing TypeScript language server"
         else
             print_success "TypeScript language server (already installed)"
@@ -1000,16 +1067,16 @@ install_lsp_servers() {
         # Vue language server
         if ! npm list -g @vue/language-server &>/dev/null; then
             execute \
-                "sudo npm install -g @vue/language-server" \
+                "npm install -g @vue/language-server" \
                 "Installing Vue language server"
         else
             print_success "Vue language server (already installed)"
         fi
         
-        # ESLint and Prettier for code formatting
+        # ESLint and Prettier for code formatting (already installed in nodejs packages)
         if ! npm list -g eslint &>/dev/null; then
             execute \
-                "sudo npm install -g eslint" \
+                "npm install -g eslint" \
                 "Installing ESLint"
         else
             print_success "ESLint (already installed)"
@@ -1017,7 +1084,7 @@ install_lsp_servers() {
         
         if ! npm list -g prettier &>/dev/null; then
             execute \
-                "sudo npm install -g prettier" \
+                "npm install -g prettier" \
                 "Installing Prettier"
         else
             print_success "Prettier (already installed)"
@@ -1034,7 +1101,7 @@ install_lsp_servers() {
     if check_command npm; then
         if ! npm list -g bash-language-server &>/dev/null; then
             execute \
-                "sudo npm install -g bash-language-server" \
+                "npm install -g bash-language-server" \
                 "Installing Bash language server"
         else
             print_success "Bash language server (already installed)"
@@ -1045,7 +1112,7 @@ install_lsp_servers() {
     if check_command npm; then
         if ! npm list -g yaml-language-server &>/dev/null; then
             execute \
-                "sudo npm install -g yaml-language-server" \
+                "npm install -g yaml-language-server" \
                 "Installing YAML language server"
         else
             print_success "YAML language server (already installed)"
@@ -1056,7 +1123,7 @@ install_lsp_servers() {
     if check_command npm; then
         if ! npm list -g vscode-langservers-extracted &>/dev/null; then
             execute \
-                "sudo npm install -g vscode-langservers-extracted" \
+                "npm install -g vscode-langservers-extracted" \
                 "Installing JSON/HTML/CSS language servers"
         else
             print_success "JSON/HTML/CSS language servers (already installed)"

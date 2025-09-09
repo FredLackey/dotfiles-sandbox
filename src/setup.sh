@@ -99,6 +99,10 @@ download_repository() {
     
     # Move to final location
     if [ -d "$DOTFILES_DIR" ]; then
+        # Backup any local changes before updating
+        if [ -d "$DOTFILES_DIR/.git" ]; then
+            print_info "Backing up any local changes..."
+        fi
         execute "cp -r '$temp_dir'/* '$DOTFILES_DIR'/ 2>/dev/null || true; \
                  cp -r '$temp_dir'/.[^.]* '$DOTFILES_DIR'/ 2>/dev/null || true" \
                 "Updating existing dotfiles"
@@ -114,18 +118,67 @@ download_repository() {
     return 0
 }
 
+# Update repository using git (if available and configured)
+update_repository_git() {
+    if [ ! -d "$DOTFILES_DIR/.git" ]; then
+        # Not a git repository, use download method
+        return 1
+    fi
+    
+    if ! check_command git; then
+        # Git not available, use download method
+        return 1
+    fi
+    
+    cd "$DOTFILES_DIR"
+    
+    # Check if there are uncommitted changes
+    if git diff --quiet && git diff --staged --quiet; then
+        # No local changes, safe to pull
+        execute "git fetch origin ${REPO_BRANCH} && git reset --hard origin/${REPO_BRANCH}" \
+                "Updating repository to latest version"
+        cd - >/dev/null
+        return 0
+    else
+        # Local changes exist
+        print_info "Local changes detected in $DOTFILES_DIR"
+        execute "git stash push -m 'Auto-stash before dotfiles update'" \
+                "Stashing local changes"
+        execute "git fetch origin ${REPO_BRANCH} && git reset --hard origin/${REPO_BRANCH}" \
+                "Updating repository to latest version"
+        print_info "Local changes have been stashed. Use 'git stash pop' to restore them."
+        cd - >/dev/null
+        return 0
+    fi
+}
+
 # Main orchestration function
 main() {
     print_title "Dotfiles Installation"
     
-    # Step 1: Download repository (if not already present)
+    # Step 1: Handle repository - download or update
     if [ ! -d "$DOTFILES_DIR" ] || [ ! -f "$DOTFILES_DIR/src/setup.sh" ]; then
+        # Fresh installation - download repository
         download_repository || {
             print_error "Failed to download repository"
             exit 1
         }
     else
-        print_success "Using existing dotfiles at $DOTFILES_DIR"
+        # Existing installation - update to latest version
+        print_info "Found existing dotfiles at $DOTFILES_DIR"
+        print_info "Checking for updates..."
+        
+        # Try to update using git first (preserves git history)
+        if update_repository_git; then
+            print_success "Updated dotfiles using git"
+        else
+            # Fall back to downloading fresh copy
+            print_info "Updating dotfiles by downloading latest version..."
+            download_repository || {
+                print_error "Failed to update repository"
+                exit 1
+            }
+        fi
     fi
     
     # Step 2: Detect platform
