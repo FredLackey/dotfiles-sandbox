@@ -906,30 +906,83 @@ install_programming_tools() {
 install_nodejs() {
     print_title "Node.js Installation"
     
-    # Check if Node.js is already installed
+    # Target Node.js version
+    local NODE_VERSION="20"  # Node.js 20.x LTS
+    local MIN_NODE_MAJOR="20"
+    
+    # Check if Node.js is already installed and get version
     if check_command node; then
         local current_version=$(node --version 2>/dev/null)
-        print_success "Node.js already installed ($current_version)"
-    else
-        # Install Node.js via NodeSource repository (LTS version)
-        execute \
-            "curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash -" \
-            "Adding NodeSource repository"
+        local current_major=$(echo "$current_version" | grep -oE '[0-9]+' | head -1)
         
-        execute \
-            "sudo apt-get install -qqy nodejs" \
-            "Installing Node.js and npm"
+        print_info "Current Node.js version: $current_version"
         
-        if check_command node && check_command npm; then
-            local node_version=$(node --version 2>/dev/null)
-            local npm_version=$(npm --version 2>/dev/null)
-            print_success "Node.js $node_version installed"
-            print_success "npm $npm_version installed"
+        # Check if we need to upgrade to Node.js 20
+        if [ "$current_major" -lt "$MIN_NODE_MAJOR" ]; then
+            print_info "Node.js version is below v20, upgrading..."
+            
+            # Remove old Node.js if installed via apt
+            execute \
+                "sudo apt-get remove -qqy nodejs npm" \
+                "Removing old Node.js version"
+            
+            # Clean up old nodejs sources
+            execute \
+                "sudo rm -f /etc/apt/sources.list.d/nodesource.list*" \
+                "Cleaning up old NodeSource repository"
         else
-            print_error "Failed to install Node.js"
-            return 1
+            print_success "Node.js $current_version is already v20 or higher"
+            
+            # Just update npm if Node.js is already v20+
+            if check_command npm; then
+                local npm_version=$(npm --version 2>/dev/null)
+                print_info "Current npm version: $npm_version"
+                
+                # Try to update npm, but don't fail if it errors
+                execute \
+                    "sudo npm install -g npm@latest 2>/dev/null || true" \
+                    "Attempting to update npm"
+            fi
+            
+            # Skip to package installation
+            install_nodejs_packages
+            return 0
         fi
     fi
+    
+    # Add NodeSource repository for Node.js 20
+    print_info "Setting up NodeSource repository for Node.js v${NODE_VERSION}..."
+    execute \
+        "curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION}.x | sudo -E bash -" \
+        "Adding NodeSource repository"
+    
+    # Install Node.js
+    execute \
+        "sudo apt-get install -qqy nodejs" \
+        "Installing Node.js v${NODE_VERSION}"
+    
+    # Verify installation
+    if check_command node && check_command npm; then
+        local node_version=$(node --version 2>/dev/null)
+        local npm_version=$(npm --version 2>/dev/null)
+        print_success "Node.js $node_version installed"
+        print_success "npm $npm_version installed"
+        
+        # Update npm to latest compatible version
+        execute \
+            "sudo npm install -g npm@latest 2>/dev/null || true" \
+            "Updating npm to latest version"
+    else
+        print_error "Failed to install Node.js"
+        return 1
+    fi
+    
+    # Install global packages
+    install_nodejs_packages
+}
+
+# Install Node.js global packages
+install_nodejs_packages() {
     
     # Install global npm packages for development
     print_info "Installing global npm packages"

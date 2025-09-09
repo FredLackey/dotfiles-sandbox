@@ -703,24 +703,49 @@ install_programming_tools() {
 install_nodejs() {
     print_info "Installing Node.js..."
     
-    # Check if Node.js is already installed
+    # Target Node.js version
+    local NODE_VERSION="20"  # Node.js 20.x LTS
+    local MIN_NODE_MAJOR="20"
+    
+    # Check if Node.js is already installed and get version
     if check_command node; then
         local current_version=$(node --version 2>/dev/null)
-        print_success "Node.js already installed ($current_version)"
+        local current_major=$(echo "$current_version" | grep -oE '[0-9]+' | head -1)
         
-        # Update npm to latest
-        if check_command npm; then
+        print_info "Current Node.js version: $current_version"
+        
+        # Check if we need to upgrade to Node.js 20
+        if [ "$current_major" -lt "$MIN_NODE_MAJOR" ]; then
+            print_info "Node.js version is below v20, upgrading..."
+            
+            # Remove old Node.js if installed via apt
             execute \
-                "sudo npm install -g npm@latest" \
-                "Updating npm to latest version"
+                "sudo apt-get remove -qqy nodejs npm" \
+                "Removing old Node.js version"
+            
+            # Clean up old nodejs sources
+            execute \
+                "sudo rm -f /etc/apt/sources.list.d/nodesource.list*" \
+                "Cleaning up old NodeSource repository"
+        else
+            print_success "Node.js $current_version is already v20 or higher"
+            
+            # Just update npm if Node.js is already v20+
+            if check_command npm; then
+                local npm_version=$(npm --version 2>/dev/null)
+                print_info "Current npm version: $npm_version"
+                
+                # Try to update npm, but don't fail if it errors
+                execute \
+                    "sudo npm install -g npm@latest 2>/dev/null || true" \
+                    "Attempting to update npm"
+            fi
+            return 0
         fi
-        return 0
     fi
     
-    # Install Node.js via NodeSource repository (LTS version)
-    local NODE_VERSION="20"  # Node.js 20.x LTS
-    
-    # Add NodeSource repository
+    # Add NodeSource repository for Node.js 20
+    print_info "Setting up NodeSource repository for Node.js v${NODE_VERSION}..."
     execute \
         "curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION}.x | sudo -E bash -" \
         "Adding NodeSource repository"
@@ -728,13 +753,18 @@ install_nodejs() {
     # Install Node.js
     execute \
         "sudo apt-get install -qqy nodejs" \
-        "Installing Node.js"
+        "Installing Node.js v${NODE_VERSION}"
     
     # Verify installation
     if check_command node && check_command npm; then
         local node_version=$(node --version 2>/dev/null)
         local npm_version=$(npm --version 2>/dev/null)
         print_success "Node.js $node_version and npm $npm_version installed"
+        
+        # Update npm to latest compatible version
+        execute \
+            "sudo npm install -g npm@latest 2>/dev/null || true" \
+            "Updating npm to latest version"
     else
         print_error "Failed to install Node.js"
         return 1
