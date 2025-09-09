@@ -1,91 +1,72 @@
--- Treesitter Configuration
--- Advanced syntax highlighting and code understanding
+-- Simplified Treesitter Configuration
+-- Minimal setup to avoid compilation errors on first run
 
 return {
   "nvim-treesitter/nvim-treesitter",
-  build = ":TSUpdate",
-  event = { "BufReadPost", "BufNewFile" },
-  dependencies = {
-    "nvim-treesitter/nvim-treesitter-textobjects",
-  },
+  lazy = false,
+  priority = 100,
   config = function()
-    -- Disable auto-tag initially to avoid errors
-    local ok, configs = pcall(require, "nvim-treesitter.configs")
-    if not ok then
-      vim.notify("Treesitter not found!", vim.log.levels.ERROR)
+    -- Safely try to setup treesitter
+    local status_ok, configs = pcall(require, "nvim-treesitter.configs")
+    if not status_ok then
+      -- Treesitter not available yet, skip configuration
       return
     end
     
+    -- Minimal configuration with no automatic parser installation
     configs.setup({
-      -- Start with minimal parsers that usually compile without issues
-      ensure_installed = {
-        "bash",
-        "lua",
-        "vim",
-        "vimdoc",
-        "json",
-        "yaml",
-        "markdown",
-        "markdown_inline",
-      },
-      -- Don't auto-install to avoid compilation errors on first run
+      -- Empty ensure_installed to avoid automatic compilation
+      ensure_installed = {},
+      
+      -- Disable automatic installation
       auto_install = false,
-      -- Install parsers synchronously (only applied to ensure_installed)
-      sync_install = false,
-      -- Syntax highlighting
+      
+      -- Enable basic highlighting if parsers are available
       highlight = {
         enable = true,
+        disable = function(lang, buf)
+          -- Disable for large files
+          local max_filesize = 100 * 1024 -- 100 KB
+          local ok, stats = pcall(vim.loop.fs_stat, vim.api.nvim_buf_get_name(buf))
+          if ok and stats and stats.size > max_filesize then
+            return true
+          end
+        end,
         additional_vim_regex_highlighting = false,
       },
-      -- Indentation based on treesitter
-      indent = { 
-        enable = true 
-      },
-      -- Incremental selection
-      incremental_selection = {
+      
+      -- Basic indentation
+      indent = {
         enable = true,
-        keymaps = {
-          init_selection = "<C-space>",
-          node_incremental = "<C-space>",
-          scope_incremental = "<C-s>",
-          node_decremental = "<C-backspace>",
-        },
-      },
-      -- Text objects
-      textobjects = {
-        select = {
-          enable = true,
-          lookahead = true,
-          keymaps = {
-            ["af"] = "@function.outer",
-            ["if"] = "@function.inner",
-            ["ac"] = "@class.outer",
-            ["ic"] = "@class.inner",
-            ["aa"] = "@parameter.outer",
-            ["ia"] = "@parameter.inner",
-          },
-        },
-        move = {
-          enable = true,
-          set_jumps = true,
-          goto_next_start = {
-            ["]f"] = "@function.outer",
-            ["]c"] = "@class.outer",
-          },
-          goto_next_end = {
-            ["]F"] = "@function.outer",
-            ["]C"] = "@class.outer",
-          },
-          goto_previous_start = {
-            ["[f"] = "@function.outer",
-            ["[c"] = "@class.outer",
-          },
-          goto_previous_end = {
-            ["[F"] = "@function.outer",
-            ["[C"] = "@class.outer",
-          },
-        },
+        disable = { "yaml" }, -- YAML indentation can be problematic
       },
     })
+    
+    -- Create user command to install parsers manually
+    vim.api.nvim_create_user_command("TSInstallBasic", function()
+      -- Install only the most basic parsers
+      vim.cmd("TSInstall lua")
+      vim.cmd("TSInstall vim")
+      vim.cmd("TSInstall vimdoc")
+    end, { desc = "Install basic Treesitter parsers" })
+    
+    vim.api.nvim_create_user_command("TSInstallWeb", function()
+      -- Install web development parsers
+      vim.cmd("TSInstall javascript")
+      vim.cmd("TSInstall typescript")
+      vim.cmd("TSInstall html")
+      vim.cmd("TSInstall css")
+      vim.cmd("TSInstall json")
+    end, { desc = "Install web development Treesitter parsers" })
+    
+    vim.api.nvim_create_user_command("TSInstallAll", function()
+      -- Install all common parsers
+      vim.cmd("TSInstall bash")
+      vim.cmd("TSInstall python")
+      vim.cmd("TSInstall java")
+      vim.cmd("TSInstall yaml")
+      vim.cmd("TSInstall markdown")
+      vim.cmd("TSInstall dockerfile")
+    end, { desc = "Install all common Treesitter parsers" })
   end,
 }
