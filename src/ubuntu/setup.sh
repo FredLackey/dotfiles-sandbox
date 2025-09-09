@@ -1106,6 +1106,9 @@ install_build_tools() {
 install_lsp_servers() {
     print_title "Language Server Protocol (LSP) Servers"
     
+    # Continue even if individual servers fail
+    set +e
+    
     # JavaScript/TypeScript LSP
     if check_command npm; then
         # TypeScript Language Server
@@ -1145,9 +1148,9 @@ install_lsp_servers() {
         fi
         
         # JavaScript Debug Adapter for DAP
-        if ! npm list -g @vscode/js-debug 2>/dev/null | grep -q @vscode/js-debug; then
+        if ! npm list -g js-debug-adapter 2>/dev/null | grep -q js-debug-adapter; then
             execute \
-                "sudo npm install -g @vscode/js-debug" \
+                "sudo npm install -g js-debug-adapter" \
                 "Installing JavaScript Debug Adapter"
         else
             print_success "JavaScript Debug Adapter already installed"
@@ -1156,19 +1159,36 @@ install_lsp_servers() {
     
     # Python LSP
     if check_command pip3; then
-        if ! pip3 show python-lsp-server >/dev/null 2>&1; then
+        # Try to install pipx first as a better alternative
+        if ! check_command pipx; then
             execute \
-                "pip3 install --user 'python-lsp-server[all]'" \
-                "Installing Python Language Server"
+                "sudo apt-get install -qqy pipx && pipx ensurepath" \
+                "Installing pipx for Python packages" || true
+        fi
+        
+        if ! pip3 show python-lsp-server >/dev/null 2>&1 && ! pipx list 2>/dev/null | grep -q python-lsp-server; then
+            execute \
+                "pip3 install --user --break-system-packages 'python-lsp-server[all]' 2>/dev/null || \
+                 pip3 install --user 'python-lsp-server[all]' 2>/dev/null || \
+                 pipx install 'python-lsp-server[all]' 2>/dev/null || \
+                 true" \
+                "Installing Python Language Server" || {
+                    print_warning "Could not install Python Language Server"
+                }
         else
             print_success "Python Language Server already installed"
         fi
         
         # Python Debug Adapter
-        if ! pip3 show debugpy >/dev/null 2>&1; then
+        if ! pip3 show debugpy >/dev/null 2>&1 && ! pipx list 2>/dev/null | grep -q debugpy; then
             execute \
-                "pip3 install --user debugpy" \
-                "Installing Python Debug Adapter"
+                "pip3 install --user --break-system-packages debugpy 2>/dev/null || \
+                 pip3 install --user debugpy 2>/dev/null || \
+                 pipx install debugpy 2>/dev/null || \
+                 true" \
+                "Installing Python Debug Adapter" || {
+                    print_warning "Could not install Python Debug Adapter"
+                }
         else
             print_success "Python Debug Adapter already installed"
         fi
@@ -1198,6 +1218,9 @@ install_lsp_servers() {
     
     # Lua Language Server (for Neovim config development)
     install_lua_language_server
+    
+    # Return success even if some servers failed
+    return 0
 }
 
 # Install Lua Language Server
