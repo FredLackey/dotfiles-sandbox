@@ -1148,13 +1148,12 @@ install_lsp_servers() {
         fi
         
         # JavaScript Debug Adapter for DAP
-        if ! npm list -g js-debug-adapter 2>/dev/null | grep -q js-debug-adapter; then
-            execute \
-                "sudo npm install -g js-debug-adapter" \
-                "Installing JavaScript Debug Adapter"
-        else
-            print_success "JavaScript Debug Adapter already installed"
-        fi
+        # Note: vscode-js-debug needs to be built from source or installed via Mason in Neovim
+        # It's not available as a simple npm package
+        # Users should install it through Mason.nvim or build manually:
+        # git clone https://github.com/microsoft/vscode-js-debug
+        # cd vscode-js-debug && npm install --legacy-peer-deps && npx gulp vsDebugServerBundle && mv dist out
+        print_info "JavaScript Debug Adapter should be installed via Mason.nvim in Neovim"
     fi
     
     # Python LSP

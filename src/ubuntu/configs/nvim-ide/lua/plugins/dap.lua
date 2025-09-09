@@ -127,18 +127,40 @@ return {
       vim.fn.sign_define("DapStopped", { text = "", texthl = "DapStopped", linehl = "", numhl = "" })
       
       -- JavaScript/TypeScript configuration
-      dap.adapters["pwa-node"] = {
-        type = "server",
-        host = "localhost",
-        port = "${port}",
-        executable = {
-          command = "node",
-          args = {
-            vim.fn.stdpath("data") .. "/mason/packages/js-debug-adapter/js-debug/src/dapDebugServer.js",
-            "${port}",
+      -- Note: Requires manual installation via Mason or building from source
+      -- The adapter path may need adjustment based on installation method
+      local js_debug_path = vim.fn.stdpath("data") .. "/mason/packages/js-debug-adapter"
+      if vim.fn.isdirectory(js_debug_path) == 1 then
+        dap.adapters["pwa-node"] = {
+          type = "server",
+          host = "localhost",
+          port = "${port}",
+          executable = {
+            command = "node",
+            args = {
+              js_debug_path .. "/js-debug/src/dapDebugServer.js",
+              "${port}",
+            },
           },
-        },
-      }
+        }
+      else
+        -- Alternative path for manual installation
+        local manual_path = vim.fn.stdpath("data") .. "/vscode-js-debug"
+        if vim.fn.isdirectory(manual_path) == 1 then
+          dap.adapters["pwa-node"] = {
+            type = "server",
+            host = "localhost",
+            port = "${port}",
+            executable = {
+              command = "node",
+              args = {
+                manual_path .. "/out/src/dapDebugServer.js",
+                "${port}",
+              },
+            },
+          }
+        end
+      end
       
       for _, language in ipairs({ "typescript", "javascript", "typescriptreact", "javascriptreact" }) do
         dap.configurations[language] = {
@@ -227,11 +249,21 @@ return {
       require("mason-nvim-dap").setup({
         ensure_installed = {
           "python",
-          "js",
+          "js-debug-adapter",
           "javadbg",
           "javatest",
         },
         automatic_installation = true,
+        handlers = {
+          function(config)
+            -- Default handler
+            require("mason-nvim-dap").default_setup(config)
+          end,
+          -- Custom handler for js-debug-adapter
+          ["js-debug-adapter"] = function(config)
+            -- This will be handled by our custom configuration above
+          end,
+        },
       })
     end,
   },
