@@ -92,6 +92,40 @@ function InstallPackage([string]$name, [string]$displayName, [int]$maxRetries = 
         return $true
     }
     
+    # Special checks for commonly pre-installed software
+    switch ($name) {
+        "git" {
+            if (Get-Command git -ErrorAction SilentlyContinue) {
+                WriteSuccess "Git is already installed on system"
+                return $true
+            }
+        }
+        "vscode" {
+            if (Get-Command code -ErrorAction SilentlyContinue) {
+                WriteSuccess "Visual Studio Code is already installed on system"
+                return $true
+            }
+        }
+        "docker-desktop" {
+            if (Get-Command docker -ErrorAction SilentlyContinue) {
+                WriteSuccess "Docker Desktop is already installed on system"
+                return $true
+            }
+        }
+        "python" {
+            if (Get-Command python -ErrorAction SilentlyContinue) {
+                WriteSuccess "Python is already installed on system"
+                return $true
+            }
+        }
+        "nodejs-lts" {
+            if (Get-Command node -ErrorAction SilentlyContinue) {
+                WriteSuccess "Node.js is already installed on system"
+                return $true
+            }
+        }
+    }
+    
     $retryCount = 0
     $installed = $false
     
@@ -224,7 +258,26 @@ if (-not $Minimal) {
     
     if (-not $SkipDocker) {
         WriteTitle "Container Tools"
-        $null = InstallPackage "docker-desktop" "Docker Desktop"
+        
+        # Check if Docker Desktop is already installed
+        $dockerInstalled = $false
+        
+        # Check common Docker Desktop installation indicators
+        if (Get-Command docker -ErrorAction SilentlyContinue) {
+            $dockerInstalled = $true
+        } elseif (Test-Path "$env:ProgramFiles\Docker\Docker\Docker Desktop.exe") {
+            $dockerInstalled = $true
+        } elseif (Test-Path "${env:ProgramFiles(x86)}\Docker\Docker\Docker Desktop.exe") {
+            $dockerInstalled = $true
+        } elseif (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object { $_.DisplayName -like "*Docker Desktop*" }) {
+            $dockerInstalled = $true
+        }
+        
+        if ($dockerInstalled) {
+            WriteSuccess "Docker Desktop is already installed"
+        } else {
+            $null = InstallPackage "docker-desktop" "Docker Desktop"
+        }
     }
     
     if (-not $SkipDatabases) {
