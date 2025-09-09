@@ -118,7 +118,7 @@ function main() {
     if (-not (Test-Administrator)) {
         print_error "This script requires Administrator privileges"
         print_info "Please run PowerShell as Administrator and try again"
-        exit 1
+        return
     }
 
     # Check for .NET Framework 4.8
@@ -162,7 +162,7 @@ function main() {
             clear_line
             print_error ("Failed to install Chocolatey: " + $_)
             print_info "Please install Chocolatey manually from https://chocolatey.org"
-            exit 1
+            return
         }
     }
 
@@ -553,6 +553,3 @@ To check for outdated packages:
 
 # Execute main function
 main
-
-# Exit successfully
-exit 0

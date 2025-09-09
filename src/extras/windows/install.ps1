@@ -9,7 +9,7 @@ if (-NOT ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdent
     Write-Host ""
     Write-Host "To install, run the following command in an elevated PowerShell prompt:" -ForegroundColor Cyan
     Write-Host 'Set-ExecutionPolicy Bypass -Scope Process -Force; iex ((New-Object System.Net.WebClient).DownloadString("https://raw.github.com/fredlackey/dotfiles-sandbox/main/src/extras/windows/install.ps1"))' -ForegroundColor White
-    exit 1
+    return
 }
 
 Write-Host "Windows Development Environment Installer" -ForegroundColor Cyan
@@ -36,5 +36,6 @@ try {
 } catch {
     Write-Host "ERROR: Failed to download or execute setup script" -ForegroundColor Red
     Write-Host $_.Exception.Message -ForegroundColor Red
-    exit 1
+    Write-Host ""
+    Write-Host "Please check your internet connection and try again." -ForegroundColor Yellow
 }
