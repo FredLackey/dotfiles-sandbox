@@ -13,21 +13,31 @@ PARENT_DIR="$(dirname "$SCRIPT_DIR")"
 if [ -f "$PARENT_DIR/../utils/output.sh" ]; then
     source "$PARENT_DIR/../utils/output.sh"
 else
-    # Fallback output functions
-    print_success() { echo "   [✔] $1"; }
-    print_error() { echo "   [✖] $1"; }
-    print_info() { echo "   [i] $1"; }
-    print_warning() { echo "   [!] $1"; }
-    print_title() { echo -e "\n   $1\n"; }
+    # Fallback output functions with colors
+    print_success() { 
+        printf "\033[32m   [✔] %s\033[0m\n" "$1"  # Green
+    }
+    print_error() { 
+        printf "\033[31m   [✖] %s\033[0m\n" "$1"  # Red
+    }
+    print_info() { 
+        printf "\033[34m   [i] %s\033[0m\n" "$1"  # Blue
+    }
+    print_warning() { 
+        printf "\033[33m   [!] %s\033[0m\n" "$1"  # Yellow
+    }
+    print_title() { 
+        printf "\033[35m\n   %s\n\n\033[0m" "$1"  # Magenta
+    }
     execute() {
         local CMDS="$1"
         local MSG="${2:-$1}"
-        echo "   [⋯] $MSG"
+        printf "   [⋯] %s" "$MSG"
         if eval "$CMDS" > /dev/null 2>&1; then
-            echo -e "\033[1A\033[K   [✔] $MSG"
+            printf "\r\033[K\033[32m   [✔] %s\033[0m\n" "$MSG"  # Green
             return 0
         else
-            echo -e "\033[1A\033[K   [✖] $MSG"
+            printf "\r\033[K\033[31m   [✖] %s\033[0m\n" "$MSG"  # Red
             return 1
         fi
     }
@@ -231,9 +241,12 @@ bindkey '^[[3~' delete-char             # Delete
 
 # Load custom configurations if they exist
 if [ -d "$HOME/.zshrc.d" ]; then
+    # Set nullglob to handle empty directory gracefully
+    setopt NULL_GLOB
     for config in "$HOME/.zshrc.d"/*.zsh; do
         [ -r "$config" ] && source "$config"
     done
+    unsetopt NULL_GLOB
 fi
 
 # Source local configuration if it exists
