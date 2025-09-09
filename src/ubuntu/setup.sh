@@ -1304,8 +1304,10 @@ install_lsp_servers() {
         # Try to install pipx first as a better alternative
         if ! check_command pipx; then
             execute \
-                "sudo apt-get install -qqy pipx && pipx ensurepath" \
+                "sudo apt-get install -qqy pipx" \
                 "Installing pipx for Python packages" || true
+            # Ensure pipx path is in PATH (suppress output as it's informational)
+            pipx ensurepath >/dev/null 2>&1 || true
         fi
         
         if ! pip3 show python-lsp-server >/dev/null 2>&1 && ! pipx list 2>/dev/null | grep -q python-lsp-server; then

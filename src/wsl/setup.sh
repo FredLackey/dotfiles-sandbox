@@ -940,12 +940,13 @@ install_python_dev() {
             "sudo apt-get install -qqy pipx" \
             "Installing pipx"
         
-        # Ensure pipx path is in PATH
-        execute \
-            "pipx ensurepath" \
-            "Configuring pipx PATH"
+        # Ensure pipx path is in PATH (suppress output as it's informational)
+        pipx ensurepath >/dev/null 2>&1 || true
+        print_success "Configuring pipx PATH"
     else
         print_success "pipx (already installed)"
+        # Ensure path is configured even if pipx already installed
+        pipx ensurepath >/dev/null 2>&1 || true
     fi
     
     # Install Python development packages with error handling
