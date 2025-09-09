@@ -270,24 +270,37 @@ install_zsh() {
         execute \
             "sudo apt-get install -qqy --only-upgrade zsh" \
             "Checking for ZSH updates"
+        
+        # Check if version changed after update
+        local new_version=$(zsh --version 2>/dev/null | awk '{print $2}')
+        if [ "$current_version" != "$new_version" ]; then
+            print_success "ZSH updated to version $new_version"
+        fi
     else
         # Install ZSH
         execute \
             "sudo apt-get install -qqy zsh" \
             "Installing ZSH"
         
-        # Verify installation
+        # Verify installation and get version
         if check_command zsh; then
             local version=$(zsh --version 2>/dev/null | awk '{print $2}')
-            print_success "ZSH installed successfully (version $version)"
+            print_success "ZSH installed successfully"
+            print_success "ZSH version: $version"
         else
             print_error "Failed to install ZSH"
             return 1
         fi
     fi
     
-    # Ensure ZSH is in /etc/shells
+    # Display final installed version
+    local final_version=$(zsh --version 2>/dev/null | awk '{print $2}')
     local zsh_path=$(which zsh 2>/dev/null)
+    if [ -n "$final_version" ] && [ -n "$zsh_path" ]; then
+        print_info "ZSH $final_version installed at $zsh_path"
+    fi
+    
+    # Ensure ZSH is in /etc/shells
     if [ -n "$zsh_path" ]; then
         if ! grep -q "^$zsh_path$" /etc/shells 2>/dev/null; then
             execute \

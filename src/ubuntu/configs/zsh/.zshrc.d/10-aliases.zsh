@@ -51,7 +51,7 @@ alias sysrestart='sudo systemctl restart'
 alias h='history'
 alias j='jobs -l'
 alias which='type -a'
-alias path='echo -e ${PATH//:/\\n}'
+alias path='showpath'  # Uses function from 20-functions.zsh
 alias now='date +"%Y-%m-%d %H:%M:%S"'
 alias week='date +%V'
 

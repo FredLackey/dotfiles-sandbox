@@ -75,7 +75,7 @@ pubip() {
 }
 
 # Show PATH entries on separate lines
-path() {
+showpath() {
     echo "$PATH" | tr ':' '\n'
 }
 
