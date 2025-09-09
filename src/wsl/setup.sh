@@ -621,28 +621,61 @@ EOF
 install_neovim() {
     print_title "Neovim Installation"
     
-    # Remove any existing Neovim installation
+    # Check if Neovim is already installed
     if check_command nvim; then
-        local current_version=$(nvim --version 2>/dev/null | head -n1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || echo "unknown")
-        print_info "Current Neovim version: $current_version"
+        local current_version=$(nvim --version 2>/dev/null | head -n1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || echo "0.0.0")
+        print_success "Neovim already installed (version $current_version)"
+        
+        # Define minimum required version (0.9.0 for modern IDE features)
+        local min_version="0.9.0"
+        
+        # Compare versions (basic comparison - may need refinement for edge cases)
+        if [ "$(printf '%s\n' "$min_version" "$current_version" | sort -V | head -n1)" = "$min_version" ]; then
+            print_success "Neovim version $current_version meets requirements"
+            
+            # Just ensure config directory exists and set alternatives
+            mkdir -p "$HOME/.config/nvim"
+            
+            # Set Neovim as default editor alternatives (idempotent)
+            execute \
+                "sudo update-alternatives --install /usr/bin/editor editor /usr/bin/nvim 100" \
+                "Setting Neovim as editor alternative"
+            
+            execute \
+                "sudo update-alternatives --install /usr/bin/vi vi /usr/bin/nvim 100" \
+                "Setting Neovim as vi alternative"
+            
+            return 0
+        else
+            print_info "Neovim version $current_version is below minimum required ($min_version)"
+            print_info "Upgrading Neovim..."
+        fi
+    else
+        print_info "Neovim not found, installing..."
     fi
     
-    # Add Neovim PPA for latest stable version
+    # Only add PPA if we need to install or upgrade
     if ! grep -q "neovim-ppa/stable" /etc/apt/sources.list.d/*.list 2>/dev/null; then
         execute \
             "sudo add-apt-repository -y ppa:neovim-ppa/stable && sudo apt-get update -qq" \
             "Adding Neovim PPA repository"
+    else
+        print_success "Neovim PPA already configured"
+        # Just update package lists to get latest version
+        execute \
+            "sudo apt-get update -qq" \
+            "Updating package lists for Neovim"
     fi
     
-    # Install Neovim
+    # Install or upgrade Neovim
     execute \
         "sudo apt-get install -qqy neovim" \
-        "Installing Neovim"
+        "Installing/Upgrading Neovim"
     
     # Verify installation
     if check_command nvim; then
         local version=$(nvim --version 2>/dev/null | head -n1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || echo "unknown")
-        print_success "Neovim installed successfully (version $version)"
+        print_success "Neovim ready (version $version)"
     else
         print_error "Failed to install Neovim"
         return 1
@@ -797,17 +830,39 @@ install_nodejs() {
     local NODE_VERSION="20"  # Node.js 20.x LTS
     local NVM_VERSION="0.39.7"  # Latest stable nvm version
     
-    # Remove any system-installed Node.js to avoid conflicts
-    if dpkg -l | grep -q "^ii  nodejs "; then
-        print_info "Removing system-installed Node.js to avoid conflicts with nvm..."
-        execute \
-            "sudo apt-get remove -qqy nodejs npm" \
-            "Removing system Node.js"
+    # Check if Node.js is already managed by nvm
+    if [ -d "$HOME/.nvm" ]; then
+        # Source nvm to check current setup
+        export NVM_DIR="$HOME/.nvm"
+        [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
         
-        # Clean up old nodejs sources
-        execute \
-            "sudo rm -f /etc/apt/sources.list.d/nodesource.list*" \
-            "Cleaning up NodeSource repository"
+        # Check if node is from nvm (path should contain .nvm)
+        if check_command node && which node | grep -q ".nvm"; then
+            print_success "Node.js is already managed by nvm"
+            local current_node_version=$(node --version 2>/dev/null)
+            print_info "Current Node.js version: $current_node_version"
+        fi
+    fi
+    
+    # Only remove system Node.js if:
+    # 1. It exists as a system package
+    # 2. It's NOT managed by nvm (or nvm doesn't exist)
+    if dpkg -l | grep -q "^ii  nodejs "; then
+        # Check if this is truly a system package and not nvm-managed
+        if ! which node 2>/dev/null | grep -q ".nvm"; then
+            print_info "Found system-installed Node.js (not managed by nvm)"
+            print_info "Removing system Node.js to avoid conflicts with nvm..."
+            execute \
+                "sudo apt-get remove -qqy nodejs npm" \
+                "Removing system Node.js"
+            
+            # Clean up old nodejs sources
+            execute \
+                "sudo rm -f /etc/apt/sources.list.d/nodesource.list*" \
+                "Cleaning up NodeSource repository"
+        else
+            print_success "Node.js is managed by nvm, keeping current setup"
+        fi
     fi
     
     # Install nvm
