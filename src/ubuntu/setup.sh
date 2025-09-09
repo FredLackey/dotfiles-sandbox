@@ -645,6 +645,53 @@ install_neovim_dependencies() {
         fi
     fi
     
+    # IDE dependencies - ripgrep for telescope
+    if ! check_command rg; then
+        execute \
+            "sudo apt-get install -qqy ripgrep" \
+            "Installing ripgrep for Telescope search"
+    else
+        print_success "Ripgrep already installed"
+    fi
+    
+    # fd-find for telescope file finding
+    if ! check_command fd && ! check_command fdfind; then
+        execute \
+            "sudo apt-get install -qqy fd-find" \
+            "Installing fd-find for Telescope"
+        
+        # Create fd symlink if needed (Ubuntu packages it as fdfind)
+        if check_command fdfind && ! check_command fd; then
+            execute \
+                "sudo ln -s $(which fdfind) /usr/local/bin/fd" \
+                "Creating fd symlink"
+        fi
+    else
+        print_success "fd-find already installed"
+    fi
+    
+    # xclip for system clipboard integration
+    if ! check_command xclip; then
+        execute \
+            "sudo apt-get install -qqy xclip" \
+            "Installing xclip for clipboard support"
+    else
+        print_success "xclip already installed"
+    fi
+    
+    # lazygit for git integration
+    if ! check_command lazygit; then
+        LAZYGIT_VERSION=$(curl -s "https://api.github.com/repos/jesseduffield/lazygit/releases/latest" | grep -Po '"tag_name": "v\K[^"]*')
+        execute \
+            "curl -Lo lazygit.tar.gz \"https://github.com/jesseduffield/lazygit/releases/download/v${LAZYGIT_VERSION}/lazygit_${LAZYGIT_VERSION}_Linux_x86_64.tar.gz\" && \
+             tar xf lazygit.tar.gz lazygit && \
+             sudo install lazygit /usr/local/bin && \
+             rm -f lazygit.tar.gz lazygit" \
+            "Installing lazygit"
+    else
+        print_success "lazygit already installed"
+    fi
+    
     # Node.js support (check if npm exists)
     if check_command npm; then
         if ! npm list -g neovim 2>/dev/null | grep -q neovim; then
@@ -701,6 +748,7 @@ configure_neovim() {
     
     local nvim_config_dir="$HOME/.config/nvim"
     local nvim_source_dir="$SCRIPT_DIR/configs/nvim"
+    local nvim_ide_dir="$SCRIPT_DIR/configs/nvim-ide"
     
     # Create config directory if it doesn't exist
     if [ ! -d "$nvim_config_dir" ]; then
@@ -709,38 +757,62 @@ configure_neovim() {
             "Creating Neovim config directory"
     fi
     
-    # Copy Neovim configuration files
-    # Check if minimal config should be used (e.g., if build-essential is missing)
-    local use_minimal=false
-    if ! dpkg -l | grep -q "^ii  build-essential "; then
-        print_warning "build-essential not found, using minimal Neovim config"
-        use_minimal=true
+    # Determine which configuration to use
+    local config_type="basic"
+    
+    # Check if IDE dependencies are installed
+    if check_command node && check_command npm && check_command rg && (check_command fd || check_command fdfind); then
+        if dpkg -l | grep -q "^ii  build-essential "; then
+            config_type="ide"
+        else
+            config_type="full"
+        fi
+    elif dpkg -l | grep -q "^ii  build-essential "; then
+        config_type="full"
+    else
+        config_type="minimal"
     fi
     
-    if [ "$use_minimal" = true ] && [ -d "$SCRIPT_DIR/configs/nvim-minimal" ]; then
-        # Use minimal configuration
-        execute \
-            "cp -r '$SCRIPT_DIR/configs/nvim-minimal'/* '$nvim_config_dir/'" \
-            "Installing minimal Neovim configuration"
-        
-        print_success "Minimal Neovim configuration installed"
-        print_info "To upgrade to full config later, install build-essential and re-run setup"
-    elif [ -d "$nvim_source_dir" ]; then
-        # Copy entire nvim config structure
-        execute \
-            "cp -r '$nvim_source_dir'/* '$nvim_config_dir/'" \
-            "Installing full Neovim configuration"
-        
-        # Make parser installation script executable if it exists
-        if [ -f "$nvim_config_dir/install-parsers.sh" ]; then
-            chmod +x "$nvim_config_dir/install-parsers.sh"
-        fi
-        
-        print_success "Full Neovim configuration installed"
-        print_info "Run 'nvim' and wait for plugins to install on first launch"
-        print_info "For additional language support, run: ~/.config/nvim/install-parsers.sh"
-    else
-        print_warning "Neovim configuration files not found"
+    # Install appropriate configuration
+    case "$config_type" in
+        "ide")
+            if [ -d "$nvim_ide_dir" ]; then
+                execute \
+                    "cp -r '$nvim_ide_dir'/* '$nvim_config_dir/'" \
+                    "Installing Neovim IDE configuration"
+                
+                print_success "Full IDE Neovim configuration installed"
+                print_info "Neovim will install plugins on first launch"
+                print_info "LSP servers for JavaScript, TypeScript, and Java are configured"
+            else
+                config_type="full"  # Fallback to full if IDE config not found
+            fi
+            ;;
+        "full")
+            if [ -d "$nvim_source_dir" ]; then
+                execute \
+                    "cp -r '$nvim_source_dir'/* '$nvim_config_dir/'" \
+                    "Installing full Neovim configuration"
+                
+                # Make parser installation script executable if it exists
+                if [ -f "$nvim_config_dir/install-parsers.sh" ]; then
+                    chmod +x "$nvim_config_dir/install-parsers.sh"
+                fi
+                
+                print_success "Full Neovim configuration installed"
+            fi
+            ;;
+        "minimal")
+            if [ -d "$SCRIPT_DIR/configs/nvim-minimal" ]; then
+                execute \
+                    "cp -r '$SCRIPT_DIR/configs/nvim-minimal'/* '$nvim_config_dir/'" \
+                    "Installing minimal Neovim configuration"
+                
+                print_success "Minimal Neovim configuration installed"
+                print_info "To upgrade to full config later, install build-essential and re-run setup"
+            fi
+            ;;
+    esac
     fi
     
     # Set Neovim as default editor if not already set
@@ -810,15 +882,329 @@ install_tmux() {
 install_programming_tools() {
     print_title "Programming Languages & Tools"
     
-    # Future installations will include:
-    # - Node.js and npm (via NodeSource)
-    # - Java JDK (OpenJDK)
-    # - Python and pip
-    # - Go
-    # - Docker CE and Docker Compose
-    # - Build tools (make, cmake, etc.)
+    # Install Node.js and npm
+    install_nodejs
     
-    print_info "Programming tools installation (coming soon)"
+    # Install Java development tools
+    install_java
+    
+    # Install Python development tools
+    install_python_dev
+    
+    # Install Docker (for containerized development)
+    install_docker
+    
+    # Install build tools
+    install_build_tools
+    
+    # Install LSP servers for IDE functionality
+    install_lsp_servers
+}
+
+# Install Node.js and npm
+install_nodejs() {
+    print_title "Node.js Installation"
+    
+    # Check if Node.js is already installed
+    if check_command node; then
+        local current_version=$(node --version 2>/dev/null)
+        print_success "Node.js already installed ($current_version)"
+    else
+        # Install Node.js via NodeSource repository (LTS version)
+        execute \
+            "curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash -" \
+            "Adding NodeSource repository"
+        
+        execute \
+            "sudo apt-get install -qqy nodejs" \
+            "Installing Node.js and npm"
+        
+        if check_command node && check_command npm; then
+            local node_version=$(node --version 2>/dev/null)
+            local npm_version=$(npm --version 2>/dev/null)
+            print_success "Node.js $node_version installed"
+            print_success "npm $npm_version installed"
+        else
+            print_error "Failed to install Node.js"
+            return 1
+        fi
+    fi
+    
+    # Install global npm packages for development
+    print_info "Installing global npm packages"
+    
+    # Package managers and tools
+    if ! npm list -g yarn 2>/dev/null | grep -q yarn; then
+        execute \
+            "sudo npm install -g yarn" \
+            "Installing Yarn package manager"
+    else
+        print_success "Yarn already installed"
+    fi
+    
+    if ! npm list -g pnpm 2>/dev/null | grep -q pnpm; then
+        execute \
+            "sudo npm install -g pnpm" \
+            "Installing pnpm package manager"
+    else
+        print_success "pnpm already installed"
+    fi
+}
+
+# Install Java development tools
+install_java() {
+    print_title "Java Development Environment"
+    
+    # Install OpenJDK 17 (LTS)
+    if ! check_command java; then
+        execute \
+            "sudo apt-get install -qqy openjdk-17-jdk" \
+            "Installing OpenJDK 17"
+    else
+        local java_version=$(java --version 2>/dev/null | head -n1)
+        print_success "Java already installed: $java_version"
+    fi
+    
+    # Install Maven
+    if ! check_command mvn; then
+        execute \
+            "sudo apt-get install -qqy maven" \
+            "Installing Apache Maven"
+    else
+        print_success "Maven already installed"
+    fi
+    
+    # Install Gradle
+    if ! check_command gradle; then
+        execute \
+            "sudo apt-get install -qqy gradle" \
+            "Installing Gradle"
+    else
+        print_success "Gradle already installed"
+    fi
+}
+
+# Install Python development tools
+install_python_dev() {
+    print_title "Python Development Tools"
+    
+    # Python3 should already be installed, but ensure pip is available
+    if ! check_command pip3; then
+        execute \
+            "sudo apt-get install -qqy python3-pip" \
+            "Installing pip3"
+    else
+        print_success "pip3 already installed"
+    fi
+    
+    # Install Python development packages
+    execute \
+        "sudo apt-get install -qqy python3-dev python3-venv" \
+        "Installing Python development packages"
+    
+    # Install common Python tools
+    if ! pip3 show black >/dev/null 2>&1; then
+        execute \
+            "pip3 install --user black" \
+            "Installing Black formatter"
+    else
+        print_success "Black formatter already installed"
+    fi
+    
+    if ! pip3 show pylint >/dev/null 2>&1; then
+        execute \
+            "pip3 install --user pylint" \
+            "Installing Pylint"
+    else
+        print_success "Pylint already installed"
+    fi
+}
+
+# Install Docker
+install_docker() {
+    print_title "Docker Installation"
+    
+    if check_command docker; then
+        print_success "Docker already installed"
+    else
+        # Install Docker dependencies
+        execute \
+            "sudo apt-get install -qqy apt-transport-https ca-certificates curl gnupg lsb-release" \
+            "Installing Docker dependencies"
+        
+        # Add Docker's official GPG key
+        execute \
+            "curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg" \
+            "Adding Docker GPG key"
+        
+        # Set up the stable repository
+        execute \
+            "echo \"deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable\" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null" \
+            "Adding Docker repository"
+        
+        execute \
+            "sudo apt-get update -qq" \
+            "Updating package lists"
+        
+        # Install Docker Engine
+        execute \
+            "sudo apt-get install -qqy docker-ce docker-ce-cli containerd.io docker-compose-plugin" \
+            "Installing Docker Engine and Docker Compose"
+        
+        # Add current user to docker group
+        if ! groups $USER | grep -q docker; then
+            execute \
+                "sudo usermod -aG docker $USER" \
+                "Adding user to docker group"
+            print_warning "You need to log out and back in for docker group changes to take effect"
+        fi
+    fi
+}
+
+# Install build tools
+install_build_tools() {
+    print_title "Build Tools"
+    
+    local build_tools=(
+        "make"
+        "cmake"
+        "autoconf"
+        "automake"
+        "pkg-config"
+        "libssl-dev"
+        "libffi-dev"
+    )
+    
+    for tool in "${build_tools[@]}"; do
+        if ! dpkg -l | grep -q "^ii  $tool "; then
+            execute \
+                "sudo apt-get install -qqy $tool" \
+                "Installing $tool"
+        else
+            print_success "$tool already installed"
+        fi
+    done
+}
+
+# Install LSP servers for Neovim IDE functionality
+install_lsp_servers() {
+    print_title "Language Server Protocol (LSP) Servers"
+    
+    # JavaScript/TypeScript LSP
+    if check_command npm; then
+        # TypeScript Language Server
+        if ! npm list -g typescript-language-server 2>/dev/null | grep -q typescript-language-server; then
+            execute \
+                "sudo npm install -g typescript typescript-language-server" \
+                "Installing TypeScript Language Server"
+        else
+            print_success "TypeScript Language Server already installed"
+        fi
+        
+        # ESLint Language Server
+        if ! npm list -g vscode-langservers-extracted 2>/dev/null | grep -q vscode-langservers-extracted; then
+            execute \
+                "sudo npm install -g vscode-langservers-extracted" \
+                "Installing ESLint/HTML/CSS/JSON Language Servers"
+        else
+            print_success "VSCode Language Servers already installed"
+        fi
+        
+        # Tailwind CSS Language Server
+        if ! npm list -g @tailwindcss/language-server 2>/dev/null | grep -q @tailwindcss/language-server; then
+            execute \
+                "sudo npm install -g @tailwindcss/language-server" \
+                "Installing Tailwind CSS Language Server"
+        else
+            print_success "Tailwind CSS Language Server already installed"
+        fi
+        
+        # Prettier formatter
+        if ! npm list -g prettier 2>/dev/null | grep -q prettier; then
+            execute \
+                "sudo npm install -g prettier" \
+                "Installing Prettier formatter"
+        else
+            print_success "Prettier already installed"
+        fi
+        
+        # JavaScript Debug Adapter for DAP
+        if ! npm list -g @vscode/js-debug 2>/dev/null | grep -q @vscode/js-debug; then
+            execute \
+                "sudo npm install -g @vscode/js-debug" \
+                "Installing JavaScript Debug Adapter"
+        else
+            print_success "JavaScript Debug Adapter already installed"
+        fi
+    fi
+    
+    # Python LSP
+    if check_command pip3; then
+        if ! pip3 show python-lsp-server >/dev/null 2>&1; then
+            execute \
+                "pip3 install --user 'python-lsp-server[all]'" \
+                "Installing Python Language Server"
+        else
+            print_success "Python Language Server already installed"
+        fi
+        
+        # Python Debug Adapter
+        if ! pip3 show debugpy >/dev/null 2>&1; then
+            execute \
+                "pip3 install --user debugpy" \
+                "Installing Python Debug Adapter"
+        else
+            print_success "Python Debug Adapter already installed"
+        fi
+    fi
+    
+    # Bash Language Server
+    if check_command npm; then
+        if ! npm list -g bash-language-server 2>/dev/null | grep -q bash-language-server; then
+            execute \
+                "sudo npm install -g bash-language-server" \
+                "Installing Bash Language Server"
+        else
+            print_success "Bash Language Server already installed"
+        fi
+    fi
+    
+    # YAML Language Server
+    if check_command npm; then
+        if ! npm list -g yaml-language-server 2>/dev/null | grep -q yaml-language-server; then
+            execute \
+                "sudo npm install -g yaml-language-server" \
+                "Installing YAML Language Server"
+        else
+            print_success "YAML Language Server already installed"
+        fi
+    fi
+    
+    # Lua Language Server (for Neovim config development)
+    install_lua_language_server
+}
+
+# Install Lua Language Server
+install_lua_language_server() {
+    print_info "Checking Lua Language Server"
+    
+    if [ ! -f "/usr/local/bin/lua-language-server" ]; then
+        # Download and install lua-language-server
+        local LUA_LS_VERSION="3.7.4"
+        local TEMP_DIR=$(mktemp -d)
+        
+        execute \
+            "cd $TEMP_DIR && \
+             curl -Lo lua-language-server.tar.gz \"https://github.com/LuaLS/lua-language-server/releases/download/${LUA_LS_VERSION}/lua-language-server-${LUA_LS_VERSION}-linux-x64.tar.gz\" && \
+             tar xzf lua-language-server.tar.gz && \
+             sudo mkdir -p /usr/local/lib/lua-language-server && \
+             sudo cp -r * /usr/local/lib/lua-language-server/ && \
+             sudo ln -sf /usr/local/lib/lua-language-server/bin/lua-language-server /usr/local/bin/lua-language-server && \
+             cd - && rm -rf $TEMP_DIR" \
+            "Installing Lua Language Server"
+    else
+        print_success "Lua Language Server already installed"
+    fi
 }
 
 # Configure terminal and console
