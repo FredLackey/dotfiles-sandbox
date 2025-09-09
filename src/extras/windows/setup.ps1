@@ -51,7 +51,8 @@ function Test-CommandExists {
 # Function to install Chocolatey if not present
 function Install-Chocolatey {
     if (Test-CommandExists "choco") {
-        Write-ColorOutput "Chocolatey is already installed (version: $(choco --version))" "Green"
+        $chocoVersion = & choco --version 2>&1
+        Write-ColorOutput "Chocolatey is already installed (version: $chocoVersion)" "Green"
         return $true
     }
 
@@ -66,17 +67,32 @@ function Install-Chocolatey {
         
         # Download and execute Chocolatey install script
         $installScript = (New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1')
-        Invoke-Expression $installScript
+        Invoke-Expression $installScript 2>&1 | Out-String | Write-Host
         
         # Refresh PATH
         $env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path", "User")
+        $env:ChocolateyInstall = "$env:ProgramData\chocolatey"
+        
+        # Give the system a moment to register the new PATH
+        Start-Sleep -Seconds 2
+        
+        # Try to refresh the choco command
+        refreshenv 2>&1 | Out-Null
         
         # Verify installation
         if (Test-CommandExists "choco") {
             Write-ColorOutput "Chocolatey installed successfully" "Green"
             return $true
         } else {
-            throw "Chocolatey installation verification failed"
+            # Try one more time with direct path
+            $chocoPath = "$env:ProgramData\chocolatey\bin\choco.exe"
+            if (Test-Path $chocoPath) {
+                $env:Path = "$env:ProgramData\chocolatey\bin;" + $env:Path
+                Write-ColorOutput "Chocolatey installed successfully" "Green"
+                return $true
+            } else {
+                throw "Chocolatey installation verification failed"
+            }
         }
     } catch {
         Write-ColorOutput "Failed to install Chocolatey: $_" "Red"
@@ -89,18 +105,83 @@ function Configure-Chocolatey {
     Write-ColorOutput "Configuring Chocolatey for headless operation..." "Cyan"
     
     # Enable global confirmation to avoid prompts
-    & choco feature enable -n allowGlobalConfirmation -y 2>&1 | Out-Null
+    & choco feature enable -n allowGlobalConfirmation -y --limit-output 2>&1 | Out-Null
     
     # Set longer timeout for large packages
-    & choco config set commandExecutionTimeoutSeconds 14400 -y 2>&1 | Out-Null
+    & choco config set commandExecutionTimeoutSeconds 14400 -y --limit-output 2>&1 | Out-Null
     
     # Set cache location
-    & choco config set cacheLocation "$env:ProgramData\chocolatey\cache" -y 2>&1 | Out-Null
+    & choco config set cacheLocation "$env:ProgramData\chocolatey\cache" -y --limit-output 2>&1 | Out-Null
     
     # Disable progress to speed up downloads
-    & choco feature disable -n showDownloadProgress -y 2>&1 | Out-Null
+    & choco feature disable -n showDownloadProgress -y --limit-output 2>&1 | Out-Null
     
     Write-ColorOutput "Chocolatey configured for headless operation" "Green"
+}
+
+# Function to check if a program exists on the system
+function Test-ProgramInstalled {
+    param(
+        [string]$ProgramName,
+        [string[]]$CheckCommands = @(),
+        [string]$RegistryPath = ""
+    )
+    
+    # Check common executable names if not specified
+    if ($CheckCommands.Count -eq 0) {
+        $CheckCommands = @($ProgramName, "$ProgramName.exe")
+    }
+    
+    # Check if command exists in PATH
+    foreach ($cmd in $CheckCommands) {
+        if (Test-CommandExists $cmd) {
+            return $true
+        }
+    }
+    
+    # Check in common installation directories
+    $commonPaths = @(
+        "$env:ProgramFiles\$ProgramName",
+        "${env:ProgramFiles(x86)}\$ProgramName",
+        "$env:LocalAppData\$ProgramName",
+        "$env:ProgramData\$ProgramName"
+    )
+    
+    foreach ($path in $commonPaths) {
+        if (Test-Path $path) {
+            return $true
+        }
+    }
+    
+    # Check Windows Registry if path provided
+    if ($RegistryPath) {
+        if (Test-Path $RegistryPath) {
+            return $true
+        }
+    }
+    
+    # Check via Get-Package (much faster than WMI)
+    try {
+        $package = Get-Package -Name "*$ProgramName*" -ErrorAction SilentlyContinue
+        if ($package) {
+            return $true
+        }
+    } catch {
+        # Ignore errors from Get-Package
+    }
+    
+    # Check in Program Files for specific executables
+    $programFiles = @($env:ProgramFiles, ${env:ProgramFiles(x86)})
+    foreach ($dir in $programFiles) {
+        if ($dir -and (Test-Path $dir)) {
+            $found = Get-ChildItem -Path $dir -Recurse -ErrorAction SilentlyContinue -Filter "$ProgramName.exe" | Select-Object -First 1
+            if ($found) {
+                return $true
+            }
+        }
+    }
+    
+    return $false
 }
 
 # Function to install a package if not already installed
@@ -108,15 +189,26 @@ function Install-ChocoPackage {
     param(
         [string]$PackageName,
         [string]$Version = "",
-        [bool]$ForceReinstall = $false
+        [bool]$ForceReinstall = $false,
+        [string[]]$CheckCommands = @(),
+        [string]$RegistryPath = ""
     )
     
-    # Check if package is already installed
-    $installed = & choco list --local-only --exact $PackageName 2>&1
+    # First check if program is already installed on the system
+    if (-not $ForceReinstall) {
+        if (Test-ProgramInstalled -ProgramName $PackageName -CheckCommands $CheckCommands -RegistryPath $RegistryPath) {
+            $msg = "  [OK] " + $PackageName + " is already installed on system"
+            Write-ColorOutput $msg "DarkGray"
+            return $true
+        }
+    }
+    
+    # Check if package is already installed via Chocolatey
+    $installed = & choco list --local-only --exact $PackageName --limit-output 2>&1
     $isInstalled = $installed -match "$PackageName"
     
     if ($isInstalled -and -not $ForceReinstall) {
-        $msg = "  [OK] " + $PackageName + " is already installed"
+        $msg = "  [OK] " + $PackageName + " is already installed via Chocolatey"
         Write-ColorOutput $msg "DarkGray"
         return $true
     }
@@ -126,24 +218,44 @@ function Install-ChocoPackage {
         Write-ColorOutput $msg "Yellow"
         
         if ($Version) {
-            & choco install $PackageName --version $Version -y --no-progress --limitoutput 2>&1 | Out-Null
+            $chocoOutput = & choco install $PackageName --version $Version -y --no-progress --limit-output --ignore-checksums 2>&1
         } else {
-            & choco install $PackageName -y --no-progress --limitoutput 2>&1 | Out-Null
+            $chocoOutput = & choco install $PackageName -y --no-progress --limit-output --ignore-checksums 2>&1
         }
         
-        if ($LASTEXITCODE -eq 0) {
+        if ($LASTEXITCODE -eq 0 -or $LASTEXITCODE -eq 3010) {
             $msg = "  [OK] " + $PackageName + " installed successfully"
             Write-ColorOutput $msg "Green"
             return $true
+        } elseif ($LASTEXITCODE -eq 1641) {
+            $msg = "  [OK] " + $PackageName + " installed (restart required)"
+            Write-ColorOutput $msg "Yellow"
+            return $true
         } else {
-            $msg = "  [FAIL] " + $PackageName + " installation failed with exit code " + $LASTEXITCODE
+            # Check if package was already installed
+            $alreadyInstalled = $chocoOutput | Select-String -Pattern "already installed" -Quiet
+            if ($alreadyInstalled) {
+                $msg = "  [OK] " + $PackageName + " was already installed"
+                Write-ColorOutput $msg "DarkGray"
+                return $true
+            } else {
+                $msg = "  [FAIL] " + $PackageName + " installation failed with exit code " + $LASTEXITCODE
+                Write-ColorOutput $msg "Red"
+                return $false
+            }
+        }
+    } catch {
+        # Try to extract a more meaningful error message
+        $errorMsg = $_.Exception.Message
+        if ($errorMsg -like "*already installed*") {
+            $msg = "  [OK] " + $PackageName + " was already installed"
+            Write-ColorOutput $msg "DarkGray"
+            return $true
+        } else {
+            $msg = "  [FAIL] Failed to install " + $PackageName + ": " + $errorMsg
             Write-ColorOutput $msg "Red"
             return $false
         }
-    } catch {
-        $msg = "  [FAIL] Failed to install " + $PackageName + ": " + $_
-        Write-ColorOutput $msg "Red"
-        return $false
     }
 }
 
@@ -151,7 +263,7 @@ function Install-ChocoPackage {
 function Install-PackageGroup {
     param(
         [string]$GroupName,
-        [array]$Packages
+        [hashtable]$Packages
     )
     
     $msg = "`nInstalling " + $GroupName + "..."
@@ -159,16 +271,37 @@ function Install-PackageGroup {
     
     $success = 0
     $failed = 0
+    $skipped = 0
     
-    foreach ($package in $Packages) {
-        if (Install-ChocoPackage -PackageName $package -ForceReinstall $Force) {
+    foreach ($package in $Packages.GetEnumerator()) {
+        $packageName = $package.Key
+        $checkCommands = $package.Value
+        
+        # First check if already installed on system
+        if (Test-ProgramInstalled -ProgramName $packageName -CheckCommands $checkCommands) {
+            $msg = "  [SKIP] " + $packageName + " is already installed on system"
+            Write-ColorOutput $msg "DarkGray"
+            $skipped++
+            continue
+        }
+        
+        # Try to install via Chocolatey
+        $installed = Install-ChocoPackage -PackageName $packageName -CheckCommands $checkCommands -ForceReinstall $Force
+        if (-not $installed) {
+            # Retry once if failed
+            Write-ColorOutput "  Retrying $packageName..." "Yellow"
+            Start-Sleep -Seconds 2
+            $installed = Install-ChocoPackage -PackageName $packageName -CheckCommands $checkCommands -ForceReinstall $Force
+        }
+        
+        if ($installed) {
             $success++
         } else {
             $failed++
         }
     }
     
-    $msg = $GroupName + ": " + $success + " succeeded, " + $failed + " failed"
+    $msg = $GroupName + ": " + $success + " installed, " + $failed + " failed, " + $skipped + " skipped"
     Write-ColorOutput $msg "Cyan"
 }
 
@@ -219,64 +352,99 @@ function Install-DevelopmentEnvironment {
     
     Configure-Chocolatey
     
-    # Define package groups
-    $corePackages = @(
-        'git',
-        'vscode',
-        '7zip',
-        'microsoft-windows-terminal',
-        'powershell-core'
-    )
+    # Define package groups with their detection commands
+    $corePackages = @{
+        'git' = @('git', 'git.exe')
+        'vscode' = @('code', 'code.exe', 'code-insiders')
+        '7zip' = @('7z', '7z.exe', '7za.exe')
+        'powershell-core' = @('pwsh', 'pwsh.exe')
+    }
     
-    $nodePackages = @(
-        'nodejs-lts',
-        'yarn',
-        'pnpm',
-        'typescript'
-    )
+    # Check if Windows Terminal needs to be installed
+    $wtInstalled = Get-AppxPackage -Name Microsoft.WindowsTerminal -ErrorAction SilentlyContinue
+    if (-not $wtInstalled) {
+        # Check if installed via other means
+        $wtPath = "$env:LocalAppData\Microsoft\WindowsApps\wt.exe"
+        if (-not (Test-Path $wtPath)) {
+            $corePackages['microsoft-windows-terminal'] = @('wt', 'wt.exe')
+        } else {
+            Write-ColorOutput "Windows Terminal is already installed" "Green"
+        }
+    } else {
+        Write-ColorOutput "Windows Terminal is already installed (Store version)" "Green"
+    }
     
-    $javaPackages = @(
-        'openjdk17',
-        'maven',
-        'gradle'
-    )
+    $nodePackages = @{
+        'nodejs-lts' = @('node', 'node.exe', 'npm', 'npm.cmd')
+        'yarn' = @('yarn', 'yarn.cmd', 'yarn.ps1')
+        'pnpm' = @('pnpm', 'pnpm.cmd', 'pnpm.ps1')
+    }
     
-    $dotnetPackages = @(
-        'dotnet-sdk',
-        'dotnet-runtime',
-        'dotnetcore-sdk',
-        'visualstudio2022-workload-netweb'
-    )
+    $javaPackages = @{
+        'openjdk17' = @('java', 'java.exe', 'javac', 'javac.exe')
+        'maven' = @('mvn', 'mvn.cmd', 'mvn.bat')
+        'gradle' = @('gradle', 'gradle.bat')
+    }
     
-    $dockerPackages = @(
-        'docker-desktop'
-    )
+    $dotnetPackages = @{
+        'dotnet-sdk' = @('dotnet', 'dotnet.exe')
+        'dotnet-runtime' = @('dotnet', 'dotnet.exe')
+        'dotnet-aspnetcore-runtime' = @('dotnet', 'dotnet.exe')
+    }
     
-    $databasePackages = @(
-        'mongodb',
-        'postgresql',
-        'dbeaver'
-    )
+    $dockerPackages = @{
+        'docker-desktop' = @('docker', 'docker.exe', 'docker-compose', 'docker-compose.exe')
+    }
     
-    $utilityPackages = @(
-        'curl',
-        'wget',
-        'jq',
-        'make',
-        'python',
-        'gh',
-        'postman',
-        'insomnia-rest-api-client'
-    )
+    $databasePackages = @{
+        'mongodb' = @('mongo', 'mongod', 'mongo.exe', 'mongod.exe')
+        'postgresql' = @('psql', 'psql.exe', 'postgres', 'postgres.exe')
+        'dbeaver' = @('dbeaver', 'dbeaver.exe')
+    }
+    
+    $utilityPackages = @{
+        'curl' = @('curl', 'curl.exe')
+        'wget' = @('wget', 'wget.exe')
+        'jq' = @('jq', 'jq.exe')
+        'make' = @('make', 'make.exe', 'mingw32-make', 'mingw32-make.exe')
+        'python' = @('python', 'python.exe', 'python3', 'py', 'py.exe')
+        'gh' = @('gh', 'gh.exe')
+    }
+    
+    $apiPackages = @{
+        'postman' = @('postman', 'Postman.exe')
+        'insomnia-rest-api-client' = @('insomnia', 'Insomnia.exe')
+    }
     
     # Install package groups
     Install-PackageGroup -GroupName "Core Development Tools" -Packages $corePackages
     Install-PackageGroup -GroupName "Node.js Development Tools" -Packages $nodePackages
     
+    # Install TypeScript via npm after Node.js is installed
+    if (Test-CommandExists "npm") {
+        Write-ColorOutput "`nInstalling TypeScript via npm..." "Cyan"
+        & npm install -g typescript 2>&1 | Out-Null
+        if ($LASTEXITCODE -eq 0) {
+            Write-ColorOutput "  [OK] TypeScript installed successfully via npm" "Green"
+        } else {
+            Write-ColorOutput "  [FAIL] TypeScript installation failed via npm" "Red"
+        }
+    }
+    
     if (-not $Minimal) {
         Install-PackageGroup -GroupName "Java Development Tools" -Packages $javaPackages
-        Install-PackageGroup -GroupName ".NET/C# Development Tools" -Packages $dotnetPackages
+        
+        # Special handling for .NET - check if dotnet is already installed
+        if (Test-CommandExists "dotnet") {
+            Write-ColorOutput "`n.NET SDK is already installed on system" "Green"
+            $dotnetVersion = & dotnet --version 2>&1
+            Write-ColorOutput "  Version: $dotnetVersion" "DarkGray"
+        } else {
+            Install-PackageGroup -GroupName ".NET/C# Development Tools" -Packages $dotnetPackages
+        }
+        
         Install-PackageGroup -GroupName "Utility Tools" -Packages $utilityPackages
+        Install-PackageGroup -GroupName "API Development Tools" -Packages $apiPackages
         
         if (-not $SkipDatabases) {
             Install-PackageGroup -GroupName "Database Tools" -Packages $databasePackages
@@ -343,6 +511,12 @@ function Install-DevelopmentEnvironment {
     Write-ColorOutput "`n========================================" "Green"
     Write-ColorOutput "Installation Complete!" "Green"
     Write-ColorOutput "========================================`n" "Green"
+    
+    # Show summary of installations
+    Write-ColorOutput "Installation Summary:" "Cyan"
+    $installedPackages = & choco list --local-only --limit-output 2>&1
+    $packageCount = ($installedPackages | Measure-Object -Line).Lines
+    Write-ColorOutput "Total packages installed via Chocolatey: $packageCount" "Green"
     
     if (-not $SkipDocker) {
         Write-ColorOutput "IMPORTANT: Docker Desktop requires a system restart." "Yellow"
