@@ -133,6 +133,51 @@ verify_wsl() {
     print_success "Verified WSL Ubuntu environment"
 }
 
+# Configure system locale
+configure_locale() {
+    print_title "System Locale Configuration"
+    
+    # Check if locale is already properly configured
+    if locale 2>&1 | grep -q "Cannot set LC_ALL"; then
+        print_info "Configuring system locale..."
+        
+        # Generate locale
+        execute \
+            "sudo locale-gen en_US.UTF-8" \
+            "Generating en_US.UTF-8 locale"
+        
+        # Update locale
+        execute \
+            "sudo update-locale LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8" \
+            "Setting default locale to en_US.UTF-8"
+        
+        # Set for current session
+        export LANG=en_US.UTF-8
+        export LC_ALL=en_US.UTF-8
+        
+        print_success "Locale configured"
+    else
+        # Verify locale is set to en_US.UTF-8
+        if ! locale | grep -q "LANG=en_US.UTF-8"; then
+            execute \
+                "sudo update-locale LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8" \
+                "Setting locale to en_US.UTF-8"
+            export LANG=en_US.UTF-8
+            export LC_ALL=en_US.UTF-8
+        else
+            print_success "Locale already configured"
+        fi
+    fi
+    
+    # Add locale exports to bashrc if not present
+    if ! grep -q "export LANG=en_US.UTF-8" "$HOME/.bashrc" 2>/dev/null; then
+        echo '# System Locale' >> "$HOME/.bashrc"
+        echo 'export LANG=en_US.UTF-8' >> "$HOME/.bashrc"
+        echo 'export LC_ALL=en_US.UTF-8' >> "$HOME/.bashrc"
+        print_info "Added locale exports to .bashrc"
+    fi
+}
+
 # Update package lists
 update_package_lists() {
     execute \
@@ -1286,6 +1331,9 @@ main() {
     
     # Verify we're in WSL
     verify_wsl
+    
+    # Configure locale first to avoid warnings
+    configure_locale
     
     # Update package lists
     update_package_lists
