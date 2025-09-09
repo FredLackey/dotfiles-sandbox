@@ -312,6 +312,159 @@ install_zsh() {
     fi
 }
 
+# Install Oh My Zsh
+install_oh_my_zsh() {
+    print_title "Oh My Zsh Installation"
+    
+    # Check if Oh My Zsh is already installed
+    if [ -d "$HOME/.oh-my-zsh" ]; then
+        print_success "Oh My Zsh already installed"
+        
+        # Check for updates
+        if [ -f "$HOME/.oh-my-zsh/tools/upgrade.sh" ]; then
+            print_info "Checking for Oh My Zsh updates..."
+            # Run update in non-interactive mode
+            export DISABLE_UPDATE_PROMPT=true
+            sh "$HOME/.oh-my-zsh/tools/upgrade.sh" 2>/dev/null || true
+        fi
+        return 0
+    fi
+    
+    # Ensure prerequisites are installed
+    if ! check_command zsh; then
+        print_error "ZSH is required for Oh My Zsh"
+        return 1
+    fi
+    
+    if ! check_command git; then
+        print_error "Git is required for Oh My Zsh"
+        return 1
+    fi
+    
+    # Check for curl or wget
+    local download_cmd=""
+    if check_command curl; then
+        download_cmd="curl -fsSL"
+    elif check_command wget; then
+        download_cmd="wget -qO-"
+    else
+        print_error "curl or wget is required for Oh My Zsh installation"
+        return 1
+    fi
+    
+    # Back up existing .zshrc if it exists
+    if [ -f "$HOME/.zshrc" ]; then
+        execute \
+            "cp '$HOME/.zshrc' '$HOME/.zshrc.pre-oh-my-zsh'" \
+            "Backing up existing .zshrc"
+    fi
+    
+    # Download and run Oh My Zsh installer
+    # Use unattended mode to prevent interactive prompts
+    print_info "Installing Oh My Zsh..."
+    
+    # Set environment variables for unattended installation
+    export RUNZSH=no  # Don't run ZSH after installation
+    export CHSH=no    # Don't change shell (we handle this separately)
+    
+    if [ "$download_cmd" = "curl -fsSL" ]; then
+        execute \
+            "sh -c \"\$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)\" \"\" --unattended" \
+            "Installing Oh My Zsh"
+    else
+        execute \
+            "sh -c \"\$(wget -qO- https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)\" \"\" --unattended" \
+            "Installing Oh My Zsh"
+    fi
+    
+    # Check if installation was successful
+    if [ ! -d "$HOME/.oh-my-zsh" ]; then
+        print_error "Oh My Zsh installation failed"
+        return 1
+    fi
+    
+    print_success "Oh My Zsh installed successfully"
+    
+    # Copy our custom Oh My Zsh configuration template
+    local ohmyzsh_config="$SCRIPT_DIR/configs/ohmyzsh/zshrc-ohmyzsh-template"
+    if [ -f "$ohmyzsh_config" ]; then
+        execute \
+            "cp '$ohmyzsh_config' '$HOME/.zshrc'" \
+            "Installing custom Oh My Zsh configuration"
+    else
+        print_warning "Custom Oh My Zsh configuration not found, using default"
+    fi
+    
+    # Install popular third-party plugins
+    install_oh_my_zsh_plugins
+    
+    # Install Powerline fonts for themes
+    install_powerline_fonts
+    
+    return 0
+}
+
+# Install popular Oh My Zsh plugins
+install_oh_my_zsh_plugins() {
+    print_title "Oh My Zsh Plugins"
+    
+    local custom_plugins_dir="$HOME/.oh-my-zsh/custom/plugins"
+    
+    # Create custom plugins directory if it doesn't exist
+    if [ ! -d "$custom_plugins_dir" ]; then
+        execute \
+            "mkdir -p '$custom_plugins_dir'" \
+            "Creating custom plugins directory"
+    fi
+    
+    # Install zsh-autosuggestions
+    if [ ! -d "$custom_plugins_dir/zsh-autosuggestions" ]; then
+        execute \
+            "git clone https://github.com/zsh-users/zsh-autosuggestions '$custom_plugins_dir/zsh-autosuggestions'" \
+            "Installing zsh-autosuggestions plugin"
+    else
+        print_success "zsh-autosuggestions already installed"
+    fi
+    
+    # Install zsh-syntax-highlighting
+    if [ ! -d "$custom_plugins_dir/zsh-syntax-highlighting" ]; then
+        execute \
+            "git clone https://github.com/zsh-users/zsh-syntax-highlighting '$custom_plugins_dir/zsh-syntax-highlighting'" \
+            "Installing zsh-syntax-highlighting plugin"
+    else
+        print_success "zsh-syntax-highlighting already installed"
+    fi
+    
+    # Install zsh-completions
+    if [ ! -d "$custom_plugins_dir/zsh-completions" ]; then
+        execute \
+            "git clone https://github.com/zsh-users/zsh-completions '$custom_plugins_dir/zsh-completions'" \
+            "Installing zsh-completions plugin"
+    else
+        print_success "zsh-completions already installed"
+    fi
+}
+
+# Install Powerline fonts for advanced themes
+install_powerline_fonts() {
+    print_title "Powerline Fonts"
+    
+    # Check if fonts-powerline package is available
+    if dpkg -l | grep -q "^ii  fonts-powerline "; then
+        print_success "Powerline fonts already installed"
+    else
+        execute \
+            "sudo apt-get install -qqy fonts-powerline" \
+            "Installing Powerline fonts"
+    fi
+    
+    # For WSL, provide instructions for Windows-side installation
+    if [ -f /proc/version ] && grep -qi "microsoft\|wsl" /proc/version; then
+        print_info "WSL detected: Install Powerline fonts on Windows for proper display"
+        print_info "Visit: https://github.com/powerline/fonts for Windows installation"
+    fi
+}
+
 # Configure shell environment (foundation for text-based development)
 configure_shell() {
     print_title "Shell Environment Configuration"
@@ -322,48 +475,53 @@ configure_shell() {
         return 0
     }
     
-    # Copy ZSH configuration files from templates
-    local zsh_configs_dir="$SCRIPT_DIR/configs/zsh"
-    
-    if [ -d "$zsh_configs_dir" ]; then
-        # Copy main configuration files
-        for config_file in .zshenv .zprofile .zshrc; do
-            if [ -f "$zsh_configs_dir/$config_file" ]; then
-                if [ ! -f "$HOME/$config_file" ]; then
-                    execute \
-                        "cp '$zsh_configs_dir/$config_file' '$HOME/$config_file'" \
-                        "Installing $config_file"
-                else
-                    print_success "$config_file already exists (preserving)"
-                fi
-            fi
-        done
+    # Install Oh My Zsh
+    install_oh_my_zsh || {
+        print_warning "Oh My Zsh installation failed, using basic ZSH configuration"
         
-        # Create and populate .zshrc.d directory
-        if [ ! -d "$HOME/.zshrc.d" ]; then
-            execute \
-                "mkdir -p '$HOME/.zshrc.d'" \
-                "Creating ~/.zshrc.d directory"
-        fi
+        # Fall back to basic ZSH configuration
+        local zsh_configs_dir="$SCRIPT_DIR/configs/zsh"
         
-        # Copy modular configuration files
-        if [ -d "$zsh_configs_dir/.zshrc.d" ]; then
-            for module in "$zsh_configs_dir/.zshrc.d"/*.zsh; do
-                if [ -f "$module" ]; then
-                    local basename=$(basename "$module")
-                    if [ ! -f "$HOME/.zshrc.d/$basename" ]; then
+        if [ -d "$zsh_configs_dir" ]; then
+            # Copy main configuration files
+            for config_file in .zshenv .zprofile .zshrc; do
+                if [ -f "$zsh_configs_dir/$config_file" ]; then
+                    if [ ! -f "$HOME/$config_file" ]; then
                         execute \
-                            "cp '$module' '$HOME/.zshrc.d/$basename'" \
-                            "Installing $basename"
+                            "cp '$zsh_configs_dir/$config_file' '$HOME/$config_file'" \
+                            "Installing $config_file"
                     else
-                        print_success "$basename already exists (preserving)"
+                        print_success "$config_file already exists (preserving)"
                     fi
                 fi
             done
+            
+            # Create and populate .zshrc.d directory
+            if [ ! -d "$HOME/.zshrc.d" ]; then
+                execute \
+                    "mkdir -p '$HOME/.zshrc.d'" \
+                    "Creating ~/.zshrc.d directory"
+            fi
+            
+            # Copy modular configuration files
+            if [ -d "$zsh_configs_dir/.zshrc.d" ]; then
+                for module in "$zsh_configs_dir/.zshrc.d"/*.zsh; do
+                    if [ -f "$module" ]; then
+                        local basename=$(basename "$module")
+                        if [ ! -f "$HOME/.zshrc.d/$basename" ]; then
+                            execute \
+                                "cp '$module' '$HOME/.zshrc.d/$basename'" \
+                                "Installing $basename"
+                        else
+                            print_success "$basename already exists (preserving)"
+                        fi
+                    fi
+                done
+            fi
+        else
+            print_warning "ZSH config templates not found at $zsh_configs_dir"
         fi
-    else
-        print_warning "ZSH config templates not found at $zsh_configs_dir"
-    fi
+    }
     
     # Handle WSL-specific configuration
     if [ -f /proc/version ] && grep -qi "microsoft\|wsl" /proc/version; then
@@ -405,8 +563,7 @@ EOF
         print_success "ZSH is already the default shell"
     fi
     
-    print_success "Shell environment configured"
-    print_info "Future additions: Oh My Zsh, advanced themes, additional plugins"
+    print_success "Shell environment configured with Oh My Zsh"
 }
 
 # Install text-based development environment (primary focus)
