@@ -1,13 +1,16 @@
 -- Core configuration modules initialization
 
 -- Load editor options first
-require('config.options')
+pcall(require, 'config.options')
 
 -- Load key mappings
-require('config.keymaps')
+pcall(require, 'config.keymaps')
 
 -- Load plugin manager (lazy.nvim)
-require('config.lazy')
+pcall(require, 'config.lazy')
 
--- Load auto commands
-require('config.autocmds')
+-- Load auto commands last (and safely)
+-- Defer autocmds to avoid conflicts with vim runtime files
+vim.defer_fn(function()
+  pcall(require, 'config.autocmds')
+end, 100)

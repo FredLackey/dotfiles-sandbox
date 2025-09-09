@@ -710,22 +710,37 @@ configure_neovim() {
     fi
     
     # Copy Neovim configuration files
-    if [ -d "$nvim_source_dir" ]; then
+    # Check if minimal config should be used (e.g., if build-essential is missing)
+    local use_minimal=false
+    if ! dpkg -l | grep -q "^ii  build-essential "; then
+        print_warning "build-essential not found, using minimal Neovim config"
+        use_minimal=true
+    fi
+    
+    if [ "$use_minimal" = true ] && [ -d "$SCRIPT_DIR/configs/nvim-minimal" ]; then
+        # Use minimal configuration
+        execute \
+            "cp -r '$SCRIPT_DIR/configs/nvim-minimal'/* '$nvim_config_dir/'" \
+            "Installing minimal Neovim configuration"
+        
+        print_success "Minimal Neovim configuration installed"
+        print_info "To upgrade to full config later, install build-essential and re-run setup"
+    elif [ -d "$nvim_source_dir" ]; then
         # Copy entire nvim config structure
         execute \
             "cp -r '$nvim_source_dir'/* '$nvim_config_dir/'" \
-            "Installing Neovim configuration"
+            "Installing full Neovim configuration"
         
         # Make parser installation script executable if it exists
         if [ -f "$nvim_config_dir/install-parsers.sh" ]; then
             chmod +x "$nvim_config_dir/install-parsers.sh"
         fi
         
-        print_success "Neovim configuration installed"
+        print_success "Full Neovim configuration installed"
         print_info "Run 'nvim' and wait for plugins to install on first launch"
         print_info "For additional language support, run: ~/.config/nvim/install-parsers.sh"
     else
-        print_warning "Neovim configuration files not found at $nvim_source_dir"
+        print_warning "Neovim configuration files not found"
     fi
     
     # Set Neovim as default editor if not already set
