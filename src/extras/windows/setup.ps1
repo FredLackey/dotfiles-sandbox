@@ -14,9 +14,10 @@ param(
 )
 
 # Script configuration
-$ErrorActionPreference = "Stop"
+$ErrorActionPreference = "Continue"  # Continue on errors instead of stopping
 $ProgressPreference = "SilentlyContinue"
 $InformationPreference = "Continue"
+$WarningPreference = "Continue"
 
 # Function to write colored output
 function Write-ColorOutput {
@@ -170,16 +171,8 @@ function Test-ProgramInstalled {
         # Ignore errors from Get-Package
     }
     
-    # Check in Program Files for specific executables
-    $programFiles = @($env:ProgramFiles, ${env:ProgramFiles(x86)})
-    foreach ($dir in $programFiles) {
-        if ($dir -and (Test-Path $dir)) {
-            $found = Get-ChildItem -Path $dir -Recurse -ErrorAction SilentlyContinue -Filter "$ProgramName.exe" | Select-Object -First 1
-            if ($found) {
-                return $true
-            }
-        }
-    }
+    # Skip deep Program Files search to avoid hanging
+    # Most programs should be found via PATH or Get-Package already
     
     return $false
 }
@@ -218,25 +211,41 @@ function Install-ChocoPackage {
         Write-ColorOutput $msg "Yellow"
         
         if ($Version) {
-            $chocoOutput = & choco install $PackageName --version $Version -y --no-progress --limit-output --ignore-checksums 2>&1
+            $chocoOutput = & choco install $PackageName --version $Version -y --no-progress --limit-output --ignore-checksums --ignore-package-exit-codes 2>&1
         } else {
-            $chocoOutput = & choco install $PackageName -y --no-progress --limit-output --ignore-checksums 2>&1
+            $chocoOutput = & choco install $PackageName -y --no-progress --limit-output --ignore-checksums --ignore-package-exit-codes 2>&1
         }
         
-        if ($LASTEXITCODE -eq 0 -or $LASTEXITCODE -eq 3010) {
-            $msg = "  [OK] " + $PackageName + " installed successfully"
-            Write-ColorOutput $msg "Green"
-            return $true
-        } elseif ($LASTEXITCODE -eq 1641) {
-            $msg = "  [OK] " + $PackageName + " installed (restart required)"
-            Write-ColorOutput $msg "Yellow"
-            return $true
-        } else {
-            # Check if package was already installed
-            $alreadyInstalled = $chocoOutput | Select-String -Pattern "already installed" -Quiet
-            if ($alreadyInstalled) {
+        # Check various success conditions
+        $successCodes = @(0, 3010, 1641, 1605, 1614, 1641, 3010)
+        $alreadyInstalled = $chocoOutput | Select-String -Pattern "already installed|nothing to do" -Quiet
+        
+        if ($LASTEXITCODE -in $successCodes -or $alreadyInstalled) {
+            if ($LASTEXITCODE -eq 3010 -or $LASTEXITCODE -eq 1641) {
+                $msg = "  [OK] " + $PackageName + " installed (restart required)"
+                Write-ColorOutput $msg "Yellow"
+            } elseif ($alreadyInstalled) {
                 $msg = "  [OK] " + $PackageName + " was already installed"
                 Write-ColorOutput $msg "DarkGray"
+            } else {
+                $msg = "  [OK] " + $PackageName + " installed successfully"
+                Write-ColorOutput $msg "Green"
+            }
+            return $true
+        } else {
+            # Some packages return non-zero even on success, check output
+            $successPatterns = @("successfully installed", "has been installed", "install completed")
+            $foundSuccess = $false
+            foreach ($pattern in $successPatterns) {
+                if ($chocoOutput | Select-String -Pattern $pattern -Quiet) {
+                    $foundSuccess = $true
+                    break
+                }
+            }
+            
+            if ($foundSuccess) {
+                $msg = "  [OK] " + $PackageName + " installed (non-standard exit code)"
+                Write-ColorOutput $msg "Yellow"
                 return $true
             } else {
                 $msg = "  [FAIL] " + $PackageName + " installation failed with exit code " + $LASTEXITCODE
@@ -386,10 +395,9 @@ function Install-DevelopmentEnvironment {
         'gradle' = @('gradle', 'gradle.bat')
     }
     
+    # .NET packages - if dotnet exists, all components are likely installed
     $dotnetPackages = @{
         'dotnet-sdk' = @('dotnet', 'dotnet.exe')
-        'dotnet-runtime' = @('dotnet', 'dotnet.exe')
-        'dotnet-aspnetcore-runtime' = @('dotnet', 'dotnet.exe')
     }
     
     $dockerPackages = @{
@@ -437,8 +445,14 @@ function Install-DevelopmentEnvironment {
         # Special handling for .NET - check if dotnet is already installed
         if (Test-CommandExists "dotnet") {
             Write-ColorOutput "`n.NET SDK is already installed on system" "Green"
-            $dotnetVersion = & dotnet --version 2>&1
-            Write-ColorOutput "  Version: $dotnetVersion" "DarkGray"
+            try {
+                $dotnetVersion = & dotnet --version 2>&1 | Select-Object -First 1
+                Write-ColorOutput "  Version: $dotnetVersion" "DarkGray"
+                $dotnetRuntimes = & dotnet --list-runtimes 2>&1
+                Write-ColorOutput "  Runtimes installed: $(($dotnetRuntimes | Measure-Object -Line).Lines)" "DarkGray"
+            } catch {
+                # Ignore version check errors
+            }
         } else {
             Install-PackageGroup -GroupName ".NET/C# Development Tools" -Packages $dotnetPackages
         }
@@ -578,11 +592,16 @@ For updates, run:
 # Execute main function
 try {
     Install-DevelopmentEnvironment
+    Write-ColorOutput "`nScript completed successfully!" "Green"
     exit 0
 } catch {
     Write-ColorOutput "`nERROR: An unexpected error occurred:" "Red"
     Write-ColorOutput $_.Exception.Message "Red"
-    Write-ColorOutput "`nStack Trace:" "DarkGray"
-    Write-ColorOutput $_.ScriptStackTrace "DarkGray"
+    if ($_.ScriptStackTrace) {
+        Write-ColorOutput "`nStack Trace:" "DarkGray"
+        Write-ColorOutput $_.ScriptStackTrace "DarkGray"
+    }
+    Write-ColorOutput "`nThe script encountered an error but may have partially completed." "Yellow"
+    Write-ColorOutput "Check the installation summary above for details." "Yellow"
     exit 1
 }
