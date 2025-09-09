@@ -1409,6 +1409,56 @@ configure_terminal() {
     fi
 }
 
+# Set ZSH as default shell
+set_default_shell() {
+    print_title "Default Shell Configuration"
+    
+    # Check if ZSH is installed
+    if ! check_command zsh; then
+        print_info "ZSH not installed, keeping bash as default shell"
+        return 0
+    fi
+    
+    local zsh_path=$(which zsh 2>/dev/null)
+    local current_shell=$(echo $SHELL)
+    
+    # Check if ZSH is already the default shell
+    if [ "$current_shell" = "$zsh_path" ]; then
+        print_success "ZSH is already your default shell"
+        return 0
+    fi
+    
+    # Check if ZSH is in /etc/shells
+    if ! grep -q "^$zsh_path$" /etc/shells 2>/dev/null; then
+        print_warning "ZSH not found in /etc/shells, cannot set as default"
+        return 1
+    fi
+    
+    # Change default shell to ZSH
+    print_info "Setting ZSH as default shell..."
+    
+    # Use chsh to change shell (non-interactive)
+    if command -v chsh >/dev/null 2>&1; then
+        # Try with sudo first (for systems that require it)
+        sudo chsh -s "$zsh_path" "$USER" 2>/dev/null || \
+        chsh -s "$zsh_path" 2>/dev/null || {
+            print_warning "Could not automatically change shell to ZSH"
+            print_info "You can manually change it with: chsh -s $(which zsh)"
+            return 1
+        }
+        
+        if [ $? -eq 0 ]; then
+            print_success "Default shell changed to ZSH"
+            print_info "Change will take effect on next login"
+        fi
+    else
+        print_warning "chsh command not available"
+        print_info "Please manually update your shell in /etc/passwd"
+    fi
+    
+    return 0
+}
+
 # Main function
 main() {
     # Step 1: System verification and preparation
@@ -1432,12 +1482,21 @@ main() {
     # Step 5: Programming languages and tools
     install_programming_tools
     
+    # Step 6: Set ZSH as default shell if installed
+    set_default_shell
+    
     # Note: Visual development tools not applicable for Ubuntu Server
     # (Those would be in the macOS setup script)
     
     print_title "Setup Complete!"
     print_success "Ubuntu Server configured successfully"
-    print_info "Some changes may require a new terminal session to take effect"
+    
+    # Check if shell change requires re-login
+    if [ "$SHELL" != "$(which zsh 2>/dev/null)" ] && check_command zsh; then
+        print_warning "Shell has been changed to ZSH. Please log out and back in for the change to take effect."
+    else
+        print_info "Some changes may require a new terminal session to take effect"
+    fi
     
     return 0
 }
