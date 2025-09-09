@@ -116,12 +116,14 @@ function Install-ChocoPackage {
     $isInstalled = $installed -match "$PackageName"
     
     if ($isInstalled -and -not $ForceReinstall) {
-        Write-ColorOutput "   $PackageName is already installed" "DarkGray"
+        $msg = "  [OK] " + $PackageName + " is already installed"
+        Write-ColorOutput $msg "DarkGray"
         return $true
     }
     
     try {
-        Write-ColorOutput "  Installing $PackageName..." "Yellow"
+        $msg = "  Installing " + $PackageName + "..."
+        Write-ColorOutput $msg "Yellow"
         
         if ($Version) {
             & choco install $PackageName --version $Version -y --no-progress --limitoutput 2>&1 | Out-Null
@@ -130,14 +132,17 @@ function Install-ChocoPackage {
         }
         
         if ($LASTEXITCODE -eq 0) {
-            Write-ColorOutput "   $PackageName installed successfully" "Green"
+            $msg = "  [OK] " + $PackageName + " installed successfully"
+            Write-ColorOutput $msg "Green"
             return $true
         } else {
-            Write-ColorOutput "   $PackageName installation failed with exit code $LASTEXITCODE" "Red"
+            $msg = "  [FAIL] " + $PackageName + " installation failed with exit code " + $LASTEXITCODE
+            Write-ColorOutput $msg "Red"
             return $false
         }
     } catch {
-        Write-ColorOutput "   Failed to install $PackageName: $_" "Red"
+        $msg = "  [FAIL] Failed to install " + $PackageName + ": " + $_
+        Write-ColorOutput $msg "Red"
         return $false
     }
 }
@@ -149,7 +154,8 @@ function Install-PackageGroup {
         [array]$Packages
     )
     
-    Write-ColorOutput "`nInstalling $GroupName..." "Cyan"
+    $msg = "`nInstalling " + $GroupName + "..."
+    Write-ColorOutput $msg "Cyan"
     
     $success = 0
     $failed = 0
@@ -162,7 +168,8 @@ function Install-PackageGroup {
         }
     }
     
-    Write-ColorOutput "$GroupName: $success succeeded, $failed failed" "Cyan"
+    $msg = $GroupName + ": " + $success + " succeeded, " + $failed + " failed"
+    Write-ColorOutput $msg "Cyan"
 }
 
 # Function to verify installation
@@ -176,14 +183,17 @@ function Test-Installation {
     if (Test-CommandExists $Command) {
         try {
             $version = & $Command $VersionArg 2>&1 | Select-Object -First 1
-            Write-ColorOutput "   $DisplayName is installed: $version" "Green"
+            $msg = "  [OK] " + $DisplayName + " is installed: " + $version
+            Write-ColorOutput $msg "Green"
             return $true
         } catch {
-            Write-ColorOutput "   $DisplayName is installed (version check failed)" "Yellow"
+            $msg = "  [OK] " + $DisplayName + " is installed (version check failed)"
+            Write-ColorOutput $msg "Yellow"
             return $true
         }
     } else {
-        Write-ColorOutput "   $DisplayName is not installed" "Red"
+        $msg = "  [FAIL] " + $DisplayName + " is not installed"
+        Write-ColorOutput $msg "Red"
         return $false
     }
 }
