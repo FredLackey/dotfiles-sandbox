@@ -20,28 +20,36 @@ $InformationPreference = "Continue"
 $WarningPreference = "Continue"
 
 # Output formatting functions (matching Ubuntu style)
-function print_error() {
-    Write-Host "   [✖] $($args[0])" -ForegroundColor Red
+function print_error {
+    param([string]$Message)
+    Write-Host ("   [✖] " + $Message) -ForegroundColor Red
 }
 
-function print_success() {
-    Write-Host "   [✔] $($args[0])" -ForegroundColor Green
+function print_success {
+    param([string]$Message)
+    Write-Host ("   [✔] " + $Message) -ForegroundColor Green
 }
 
-function print_info() {
-    Write-Host "   [i] $($args[0])" -ForegroundColor Cyan
+function print_info {
+    param([string]$Message)
+    Write-Host ("   [i] " + $Message) -ForegroundColor Cyan
 }
 
-function print_warning() {
-    Write-Host "   [!] $($args[0])" -ForegroundColor Yellow
+function print_warning {
+    param([string]$Message)  
+    Write-Host ("   [!] " + $Message) -ForegroundColor Yellow
 }
 
-function print_title() {
-    Write-Host "`n   $($args[0])`n" -ForegroundColor Cyan
+function print_title {
+    param([string]$Message)
+    Write-Host ""
+    Write-Host ("   " + $Message) -ForegroundColor Cyan
+    Write-Host ""
 }
 
-function print_in_progress() {
-    Write-Host "   [⋯] $($args[0])" -NoNewline
+function print_in_progress {
+    param([string]$Message)
+    Write-Host ("   [⋯] " + $Message) -NoNewline
 }
 
 function clear_line() {
@@ -140,7 +148,10 @@ function main() {
             Invoke-Expression $installScript | Out-Null
             
             # Refresh environment
-            $env:ChocolateyInstall = "$([System.Environment]::GetEnvironmentVariable('ChocolateyInstall','Machine'))"
+            $env:ChocolateyInstall = [System.Environment]::GetEnvironmentVariable('ChocolateyInstall','Machine')
+            if (-not $env:ChocolateyInstall) {
+                $env:ChocolateyInstall = "$env:ProgramData\chocolatey"
+            }
             Import-Module "$env:ChocolateyInstall\helpers\chocolateyProfile.psm1" -Force
             Update-SessionEnvironment
             
@@ -423,60 +434,83 @@ function main() {
     print_title "Installation Summary"
     print_success "Packages installed: $installedCount"
     if ($failedPackages.Count -gt 0) {
-        print_error "Packages failed: $($failedPackages.Count)"
+        $failedCount = $failedPackages.Count
+        print_error "Packages failed: $failedCount"
         Write-Host "   Failed packages:"
         foreach ($pkg in $failedPackages) {
-            Write-Host "     - $pkg" -ForegroundColor Red
+            Write-Host ("     - " + $pkg) -ForegroundColor Red
         }
     }
 
     # Create summary file
     Write-Host ""
     print_in_progress "Creating summary file on Desktop..."
-    $summaryPath = "$env:USERPROFILE\Desktop\DevEnvironmentSetup_$(Get-Date -Format 'yyyyMMdd_HHmmss').txt"
+    $dateStamp = Get-Date -Format 'yyyyMMdd_HHmmss'
+    $summaryPath = "$env:USERPROFILE\Desktop\DevEnvironmentSetup_$dateStamp.txt"
     try {
+        # Build all the dynamic content first
+        $currentDate = Get-Date
+        $failedCount = $failedPackages.Count
+        
+        # Build components list
+        $components = @()
+        if (Get-Command choco -ErrorAction SilentlyContinue) { $components += "✔ Chocolatey Package Manager" } else { $components += "✖ Chocolatey Package Manager" }
+        if (Get-Command git -ErrorAction SilentlyContinue) { $components += "✔ Git" } else { $components += "✖ Git" }
+        if (Get-Command code -ErrorAction SilentlyContinue) { $components += "✔ Visual Studio Code" } else { $components += "✖ Visual Studio Code" }
+        if (Get-Command node -ErrorAction SilentlyContinue) { $components += "✔ Node.js" } else { $components += "✖ Node.js" }
+        if (Get-Command npm -ErrorAction SilentlyContinue) { $components += "✔ npm" } else { $components += "✖ npm" }
+        if (Get-Command yarn -ErrorAction SilentlyContinue) { $components += "✔ Yarn" } else { $components += "✖ Yarn" }
+        if (Get-Command pnpm -ErrorAction SilentlyContinue) { $components += "✔ pnpm" } else { $components += "✖ pnpm" }
+        
+        if (-not $Minimal) {
+            if (Get-Command java -ErrorAction SilentlyContinue) { $components += "✔ Java (OpenJDK)" } else { $components += "✖ Java (OpenJDK)" }
+            if (Get-Command mvn -ErrorAction SilentlyContinue) { $components += "✔ Maven" } else { $components += "✖ Maven" }
+            if (Get-Command gradle -ErrorAction SilentlyContinue) { $components += "✔ Gradle" } else { $components += "✖ Gradle" }
+            if (Get-Command dotnet -ErrorAction SilentlyContinue) { $components += "✔ .NET SDK" } else { $components += "✖ .NET SDK" }
+            if (Get-Command python -ErrorAction SilentlyContinue) { $components += "✔ Python" } else { $components += "✖ Python" }
+            if (Get-Command gh -ErrorAction SilentlyContinue) { $components += "✔ GitHub CLI" } else { $components += "✖ GitHub CLI" }
+        }
+        
+        if (-not $SkipDocker -and -not $Minimal) {
+            if (Get-Command docker -ErrorAction SilentlyContinue) { $components += "✔ Docker Desktop" } else { $components += "✖ Docker Desktop" }
+        }
+        
+        if (-not $SkipDatabases -and -not $Minimal) {
+            if (Get-Command mongod -ErrorAction SilentlyContinue) { $components += "✔ MongoDB" } else { $components += "✖ MongoDB" }
+            if (Get-Command psql -ErrorAction SilentlyContinue) { $components += "✔ PostgreSQL" } else { $components += "✖ PostgreSQL" }
+            $dbeaverPath = "$env:ProgramFiles\DBeaver\dbeaver.exe"
+            if (Test-Path $dbeaverPath) { $components += "✔ DBeaver" } else { $components += "✖ DBeaver" }
+        }
+        
+        $componentsList = $components -join "`n"
+        
+        # Build failed packages section if needed
+        $failedSection = ""
+        if ($failedPackages.Count -gt 0) {
+            $failedList = $failedPackages -join "`n"
+            $failedSection = @"
+
+Failed Packages:
+----------------
+$failedList
+"@
+        }
+        
+        # Now build the complete summary
         $summary = @"
 Windows Development Environment Setup Summary
 =============================================
-Date: $(Get-Date)
+Date: $currentDate
 Machine: $env:COMPUTERNAME
 User: $env:USERNAME
 
 Installed Packages: $installedCount
-Failed Packages: $($failedPackages.Count)
+Failed Packages: $failedCount
 
 Installed Components:
 ---------------------
-$(if (Get-Command choco -ErrorAction SilentlyContinue) { "✔ Chocolatey Package Manager" } else { "✖ Chocolatey Package Manager" })
-$(if (Get-Command git -ErrorAction SilentlyContinue) { "✔ Git" } else { "✖ Git" })
-$(if (Get-Command code -ErrorAction SilentlyContinue) { "✔ Visual Studio Code" } else { "✖ Visual Studio Code" })
-$(if (Get-Command node -ErrorAction SilentlyContinue) { "✔ Node.js" } else { "✖ Node.js" })
-$(if (Get-Command npm -ErrorAction SilentlyContinue) { "✔ npm" } else { "✖ npm" })
-$(if (Get-Command yarn -ErrorAction SilentlyContinue) { "✔ Yarn" } else { "✖ Yarn" })
-$(if (Get-Command pnpm -ErrorAction SilentlyContinue) { "✔ pnpm" } else { "✖ pnpm" })
-$(if (-not $Minimal) {
-    if (Get-Command java -ErrorAction SilentlyContinue) { "✔ Java (OpenJDK)" } else { "✖ Java (OpenJDK)" }
-    if (Get-Command mvn -ErrorAction SilentlyContinue) { "`n✔ Maven" } else { "`n✖ Maven" }
-    if (Get-Command gradle -ErrorAction SilentlyContinue) { "`n✔ Gradle" } else { "`n✖ Gradle" }
-    if (Get-Command dotnet -ErrorAction SilentlyContinue) { "`n✔ .NET SDK" } else { "`n✖ .NET SDK" }
-    if (Get-Command python -ErrorAction SilentlyContinue) { "`n✔ Python" } else { "`n✖ Python" }
-    if (Get-Command gh -ErrorAction SilentlyContinue) { "`n✔ GitHub CLI" } else { "`n✖ GitHub CLI" }
-})
-$(if (-not $SkipDocker -and -not $Minimal) {
-    if (Get-Command docker -ErrorAction SilentlyContinue) { "`n✔ Docker Desktop" } else { "`n✖ Docker Desktop" }
-})
-$(if (-not $SkipDatabases -and -not $Minimal) {
-    if (Get-Command mongod -ErrorAction SilentlyContinue) { "`n✔ MongoDB" } else { "`n✖ MongoDB" }
-    if (Get-Command psql -ErrorAction SilentlyContinue) { "`n✔ PostgreSQL" } else { "`n✖ PostgreSQL" }
-    if (Test-Path "$env:ProgramFiles\DBeaver\dbeaver.exe") { "`n✔ DBeaver" } else { "`n✖ DBeaver" }
-})
-
-$(if ($failedPackages.Count -gt 0) {
-"
-Failed Packages:
-----------------
-$($failedPackages -join "`n")
-"})
+$componentsList
+$failedSection
 
 Next Steps:
 -----------

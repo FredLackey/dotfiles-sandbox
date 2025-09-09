@@ -55,7 +55,7 @@ This directory contains PowerShell scripts that automate the installation and co
 Open **PowerShell as Administrator** and run:
 
 ```powershell
-Set-ExecutionPolicy Bypass -Scope Process -Force; iex ((New-Object System.Net.WebClient).DownloadString('https://raw.github.com/fredlackey/dotfiles-sandbox/main/src/extras/windows/setup.ps1'))
+Set-ExecutionPolicy Bypass -Scope Process -Force; iex ((New-Object System.Net.WebClient).DownloadString('https://raw.github.com/fredlackey/dotfiles-sandbox/main/src/extras/windows/install.ps1'))
 ```
 
 This command will:
@@ -69,7 +69,7 @@ This command will:
 ### Standard Installation
 Installs everything including databases and Docker:
 ```powershell
-Set-ExecutionPolicy Bypass -Scope Process -Force; iex ((New-Object System.Net.WebClient).DownloadString('https://raw.github.com/fredlackey/dotfiles-sandbox/main/src/extras/windows/setup.ps1'))
+Set-ExecutionPolicy Bypass -Scope Process -Force; iex ((New-Object System.Net.WebClient).DownloadString('https://raw.github.com/fredlackey/dotfiles-sandbox/main/src/extras/windows/install.ps1'))
 ```
 
 ### Minimal Installation
