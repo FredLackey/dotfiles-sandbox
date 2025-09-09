@@ -8,7 +8,7 @@ if (-NOT ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdent
     Write-Host "Please run PowerShell as Administrator and try again." -ForegroundColor Yellow
     Write-Host ""
     Write-Host "To install, run the following command in an elevated PowerShell prompt:" -ForegroundColor Cyan
-    Write-Host 'Set-ExecutionPolicy Bypass -Scope Process -Force; iex ((New-Object System.Net.WebClient).DownloadString("https://raw.githubusercontent.com/fredlackey/dotfiles-sandbox/main/src/extras/windows/install.ps1"))' -ForegroundColor White
+    Write-Host 'Set-ExecutionPolicy Bypass -Scope Process -Force; iex ((New-Object System.Net.WebClient).DownloadString("https://raw.github.com/fredlackey/dotfiles-sandbox/main/src/extras/windows/install.ps1"))' -ForegroundColor White
     exit 1
 }
 
@@ -25,7 +25,7 @@ try {
     
     # Download and execute the main setup script
     Write-Host "Downloading setup script..." -ForegroundColor Yellow
-    $setupScript = (New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/fredlackey/dotfiles-sandbox/main/src/extras/windows/setup.ps1')
+    $setupScript = (New-Object System.Net.WebClient).DownloadString('https://raw.github.com/fredlackey/dotfiles-sandbox/main/src/extras/windows/setup.ps1')
     
     Write-Host "Executing setup script..." -ForegroundColor Yellow
     Write-Host ""

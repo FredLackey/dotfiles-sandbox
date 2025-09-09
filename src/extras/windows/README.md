@@ -55,7 +55,7 @@ This directory contains PowerShell scripts that automate the installation and co
 Open **PowerShell as Administrator** and run:
 
 ```powershell
-Set-ExecutionPolicy Bypass -Scope Process -Force; iex ((New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/fredlackey/dotfiles-sandbox/main/src/extras/windows/setup.ps1'))
+Set-ExecutionPolicy Bypass -Scope Process -Force; iex ((New-Object System.Net.WebClient).DownloadString('https://raw.github.com/fredlackey/dotfiles-sandbox/main/src/extras/windows/setup.ps1'))
 ```
 
 This command will:
@@ -69,25 +69,25 @@ This command will:
 ### Standard Installation
 Installs everything including databases and Docker:
 ```powershell
-Set-ExecutionPolicy Bypass -Scope Process -Force; iex ((New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/fredlackey/dotfiles-sandbox/main/src/extras/windows/setup.ps1'))
+Set-ExecutionPolicy Bypass -Scope Process -Force; iex ((New-Object System.Net.WebClient).DownloadString('https://raw.github.com/fredlackey/dotfiles-sandbox/main/src/extras/windows/setup.ps1'))
 ```
 
 ### Minimal Installation
 Installs only essential tools (Git, VS Code, Node.js):
 ```powershell
-Set-ExecutionPolicy Bypass -Scope Process -Force; $script = (New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/fredlackey/dotfiles-sandbox/main/src/extras/windows/setup.ps1'); iex "& { $script } -Minimal"
+Set-ExecutionPolicy Bypass -Scope Process -Force; $script = (New-Object System.Net.WebClient).DownloadString('https://raw.github.com/fredlackey/dotfiles-sandbox/main/src/extras/windows/setup.ps1'); iex "& { $script } -Minimal"
 ```
 
 ### Without Docker
 Installs everything except Docker Desktop:
 ```powershell
-Set-ExecutionPolicy Bypass -Scope Process -Force; $script = (New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/fredlackey/dotfiles-sandbox/main/src/extras/windows/setup.ps1'); iex "& { $script } -SkipDocker"
+Set-ExecutionPolicy Bypass -Scope Process -Force; $script = (New-Object System.Net.WebClient).DownloadString('https://raw.github.com/fredlackey/dotfiles-sandbox/main/src/extras/windows/setup.ps1'); iex "& { $script } -SkipDocker"
 ```
 
 ### Without Databases
 Installs everything except database tools:
 ```powershell
-Set-ExecutionPolicy Bypass -Scope Process -Force; $script = (New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/fredlackey/dotfiles-sandbox/main/src/extras/windows/setup.ps1'); iex "& { $script } -SkipDatabases"
+Set-ExecutionPolicy Bypass -Scope Process -Force; $script = (New-Object System.Net.WebClient).DownloadString('https://raw.github.com/fredlackey/dotfiles-sandbox/main/src/extras/windows/setup.ps1'); iex "& { $script } -SkipDatabases"
 ```
 
 ## Local Installation
@@ -143,19 +143,19 @@ With options:
 - Won't create duplicates or conflicts
 - Includes `-Force` flag for reinstallation when needed
 
-### =Ê Progress Tracking
+### =ï¿½ Progress Tracking
 - Color-coded output for clarity
 - Real-time installation status
 - Verification of each installation
 - Summary report generated on Desktop
 
-### ¡ Optimized Performance
+### ï¿½ Optimized Performance
 - Parallel package downloads when possible
 - Disabled progress bars for faster execution
 - Extended timeouts for large packages
 - Cached package reuse
 
-### =á Error Handling
+### =ï¿½ Error Handling
 - Comprehensive error catching
 - Continues on non-critical failures
 - Detailed error messages
