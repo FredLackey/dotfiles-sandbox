@@ -813,7 +813,6 @@ configure_neovim() {
             fi
             ;;
     esac
-    fi
     
     # Set Neovim as default editor if not already set
     if ! grep -q "EDITOR=nvim" "$HOME/.bashrc" 2>/dev/null && \
