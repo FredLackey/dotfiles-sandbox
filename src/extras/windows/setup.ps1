@@ -136,7 +136,7 @@ function main() {
     print_title "Chocolatey Package Manager"
     if (Get-Command choco -ErrorAction SilentlyContinue) {
         $chocoVersion = (choco --version)
-        print_success "Chocolatey v$chocoVersion is already installed"
+        print_success ("Chocolatey v" + $chocoVersion + " is already installed")
     } else {
         print_in_progress "Installing Chocolatey..."
         try {
@@ -150,16 +150,17 @@ function main() {
             # Refresh environment
             $env:ChocolateyInstall = [System.Environment]::GetEnvironmentVariable('ChocolateyInstall','Machine')
             if (-not $env:ChocolateyInstall) {
-                $env:ChocolateyInstall = "$env:ProgramData\chocolatey"
+                $env:ChocolateyInstall = $env:ProgramData + "\chocolatey"
             }
-            Import-Module "$env:ChocolateyInstall\helpers\chocolateyProfile.psm1" -Force
+            $modulePath = $env:ChocolateyInstall + "\helpers\chocolateyProfile.psm1"
+            Import-Module $modulePath -Force
             Update-SessionEnvironment
             
             clear_line
             print_success "Chocolatey installed successfully"
         } catch {
             clear_line
-            print_error "Failed to install Chocolatey: $_"
+            print_error ("Failed to install Chocolatey: " + $_)
             print_info "Please install Chocolatey manually from https://chocolatey.org"
             exit 1
         }
@@ -171,7 +172,8 @@ function main() {
         choco feature enable -n allowGlobalConfirmation -y 2>&1 | Out-Null
         choco config set commandExecutionTimeoutSeconds 14400 2>&1 | Out-Null
         choco config set webRequestTimeoutSeconds 180 2>&1 | Out-Null
-        choco config set cacheLocation "$env:TEMP\chocolatey" 2>&1 | Out-Null
+        $cachePath = $env:TEMP + "\chocolatey"
+        choco config set cacheLocation $cachePath 2>&1 | Out-Null
         clear_line
         print_success "Chocolatey configured for automated installation"
     } catch {
@@ -195,15 +197,15 @@ function main() {
         'docker-desktop' = 'docker --version'
         'mongodb' = 'mongod --version'
         'postgresql' = 'psql --version'
-        'dbeaver' = 'Test-Path "$env:ProgramFiles\DBeaver\dbeaver.exe"'
+        'dbeaver' = 'Test-Path ($env:ProgramFiles + "\DBeaver\dbeaver.exe")'
         'curl' = 'curl --version'
         'wget' = 'wget --version'
         'jq' = 'jq --version'
         'make' = 'make --version'
         'python' = 'python --version'
         'gh' = 'gh --version'
-        'postman' = 'Test-Path "$env:LocalAppData\Postman\Postman.exe"'
-        'insomnia-rest-api-client' = 'Test-Path "$env:LocalAppData\Insomnia\Insomnia.exe"'
+        'postman' = 'Test-Path ($env:LocalAppData + "\Postman\Postman.exe")'
+        'insomnia-rest-api-client' = 'Test-Path ($env:LocalAppData + "\Insomnia\Insomnia.exe")'
     }
 
     # Function to install a package if not already present
@@ -233,13 +235,13 @@ function main() {
         }
         
         if ($isInstalled -and -not $Force) {
-            print_success "$name is already installed"
+            print_success ($name + " is already installed")
             $global:installedCount++
             return $true
         }
         
         # Try to install
-        print_in_progress "Installing $name..."
+        print_in_progress ("Installing " + $name + "...")
         
         try {
             $installCmd = "choco install $PackageName -y --no-progress --ignore-checksums"
@@ -255,18 +257,18 @@ function main() {
             # Check if installation was successful
             if ($LASTEXITCODE -eq 0 -or $output -match "already installed") {
                 clear_line
-                print_success "$name installed"
+                print_success ($name + " installed")
                 $global:installedCount++
                 return $true
             } else {
                 clear_line
-                print_error "$name installation failed"
+                print_error ($name + " installation failed")
                 $global:failedPackages += $name
                 return $false
             }
         } catch {
             clear_line
-            print_error "$name installation error: $_"
+            print_error ($name + " installation error: " + $_)
             $global:failedPackages += $name
             return $false
         }
@@ -290,7 +292,7 @@ function main() {
 
     # Special handling for Windows Terminal
     $wtInstalled = Get-AppxPackage -Name Microsoft.WindowsTerminal -ErrorAction SilentlyContinue
-    $wtPath = "$env:LocalAppData\Microsoft\WindowsApps\wt.exe"
+    $wtPath = $env:LocalAppData + "\Microsoft\WindowsApps\wt.exe"
     if (-not $wtInstalled -and -not (Test-Path $wtPath)) {
         Install-PackageIfNotPresent -PackageName 'microsoft-windows-terminal' -DisplayName 'Windows Terminal' -DetectionCommand 'wt'
     } else {
@@ -432,10 +434,10 @@ function main() {
 
     # Installation Summary
     print_title "Installation Summary"
-    print_success "Packages installed: $installedCount"
+    print_success ("Packages installed: " + $installedCount)
     if ($failedPackages.Count -gt 0) {
         $failedCount = $failedPackages.Count
-        print_error "Packages failed: $failedCount"
+        print_error ("Packages failed: " + $failedCount)
         Write-Host "   Failed packages:"
         foreach ($pkg in $failedPackages) {
             Write-Host ("     - " + $pkg) -ForegroundColor Red
@@ -446,7 +448,7 @@ function main() {
     Write-Host ""
     print_in_progress "Creating summary file on Desktop..."
     $dateStamp = Get-Date -Format 'yyyyMMdd_HHmmss'
-    $summaryPath = "$env:USERPROFILE\Desktop\DevEnvironmentSetup_$dateStamp.txt"
+    $summaryPath = $env:USERPROFILE + "\Desktop\DevEnvironmentSetup_" + $dateStamp + ".txt"
     try {
         # Build all the dynamic content first
         $currentDate = Get-Date
@@ -478,7 +480,7 @@ function main() {
         if (-not $SkipDatabases -and -not $Minimal) {
             if (Get-Command mongod -ErrorAction SilentlyContinue) { $components += "✔ MongoDB" } else { $components += "✖ MongoDB" }
             if (Get-Command psql -ErrorAction SilentlyContinue) { $components += "✔ PostgreSQL" } else { $components += "✖ PostgreSQL" }
-            $dbeaverPath = "$env:ProgramFiles\DBeaver\dbeaver.exe"
+            $dbeaverPath = $env:ProgramFiles + "\DBeaver\dbeaver.exe"
             if (Test-Path $dbeaverPath) { $components += "✔ DBeaver" } else { $components += "✖ DBeaver" }
         }
         
@@ -529,7 +531,7 @@ To check for outdated packages:
 "@
         $summary | Out-File -FilePath $summaryPath -Encoding UTF8
         clear_line
-        print_success "Summary saved to: $summaryPath"
+        print_success ("Summary saved to: " + $summaryPath)
     } catch {
         clear_line
         print_warning "Could not create summary file"
