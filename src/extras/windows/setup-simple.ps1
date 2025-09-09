@@ -169,29 +169,42 @@ if (-not $Minimal) {
     InstallPackage "maven" "Maven"
     InstallPackage "gradle" "Gradle"
     
-    # IntelliJ IDEA Ultimate - Handle specially
-    WriteInfo "Installing IntelliJ IDEA Ultimate..."
+    # IntelliJ IDEA Ultimate - Check architecture first
+    WriteInfo "Checking system architecture for IntelliJ IDEA compatibility..."
     
-    # First try the standard package
-    $ideaInstalled = InstallPackage "intellijidea-ultimate" "IntelliJ IDEA Ultimate" 3
+    # Check if x86 or x64 architecture (IntelliJ requires x86/x64)
+    $arch = $env:PROCESSOR_ARCHITECTURE
+    $arch64 = $env:PROCESSOR_ARCHITEW6432
     
-    # If that fails, try alternative approaches
-    if (-not $ideaInstalled) {
-        WriteInfo "Trying alternative installation for IntelliJ IDEA Ultimate..."
+    $isX86Compatible = ($arch -eq "AMD64") -or ($arch -eq "x86") -or ($arch64 -eq "AMD64")
+    
+    if (-not $isX86Compatible) {
+        WriteWarning "IntelliJ IDEA requires x86/x64 architecture. Current architecture: $arch"
+        WriteInfo "Skipping IntelliJ IDEA installation on ARM/other architecture"
+    } else {
+        WriteInfo "Installing IntelliJ IDEA Ultimate..."
         
-        # Try with different parameters
-        $result = choco install intellijidea-ultimate -y --ignore-checksums --allow-empty-checksums --force 2>&1
-        if ($LASTEXITCODE -eq 0 -or $result -match "already installed") {
-            WriteSuccess "IntelliJ IDEA Ultimate installed via alternative method"
-        } else {
-            # Try the community edition as fallback
-            WriteWarning "IntelliJ IDEA Ultimate installation failed, installing Community Edition instead..."
-            $communityResult = choco install intellijidea-community -y --no-progress --ignore-checksums --force 2>&1
-            if ($LASTEXITCODE -eq 0 -or $communityResult -match "already installed") {
-                WriteSuccess "IntelliJ IDEA Community Edition installed as fallback"
-                WriteInfo "You can upgrade to Ultimate Edition later if needed"
+        # First try the standard package
+        $ideaInstalled = InstallPackage "intellijidea-ultimate" "IntelliJ IDEA Ultimate" 3
+        
+        # If that fails, try alternative approaches
+        if (-not $ideaInstalled) {
+            WriteInfo "Trying alternative installation for IntelliJ IDEA Ultimate..."
+            
+            # Try with different parameters
+            $result = choco install intellijidea-ultimate -y --ignore-checksums --allow-empty-checksums --force 2>&1
+            if ($LASTEXITCODE -eq 0 -or $result -match "already installed") {
+                WriteSuccess "IntelliJ IDEA Ultimate installed via alternative method"
             } else {
-                WriteError "Could not install any version of IntelliJ IDEA"
+                # Try the community edition as fallback
+                WriteWarning "IntelliJ IDEA Ultimate installation failed, installing Community Edition instead..."
+                $communityResult = choco install intellijidea-community -y --no-progress --ignore-checksums --force 2>&1
+                if ($LASTEXITCODE -eq 0 -or $communityResult -match "already installed") {
+                    WriteSuccess "IntelliJ IDEA Community Edition installed as fallback"
+                    WriteInfo "You can upgrade to Ultimate Edition later if needed"
+                } else {
+                    WriteError "Could not install any version of IntelliJ IDEA"
+                }
             }
         }
     }

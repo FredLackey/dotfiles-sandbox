@@ -332,14 +332,27 @@ function main() {
     # Install Java Development Tools
     if (-not $Minimal -and -not $SkipJava) {
         print_title "Java Development Stack"
-        foreach ($pkg in @('openjdk17', 'maven', 'gradle', 'intellijidea-ultimate')) {
+        
+        # Install basic Java tools
+        foreach ($pkg in @('openjdk17', 'maven', 'gradle')) {
             $displayName = switch ($pkg) {
                 'openjdk17' { 'OpenJDK 17' }
                 'maven' { 'Maven' }
                 'gradle' { 'Gradle' }
-                'intellijidea-ultimate' { 'IntelliJ IDEA Ultimate' }
             }
             Install-PackageIfNotPresent -PackageName $pkg -DisplayName $displayName -DetectionCommand $packageChecks[$pkg]
+        }
+        
+        # Check architecture before installing IntelliJ IDEA
+        $arch = $env:PROCESSOR_ARCHITECTURE
+        $arch64 = $env:PROCESSOR_ARCHITEW6432
+        $isX86Compatible = ($arch -eq "AMD64") -or ($arch -eq "x86") -or ($arch64 -eq "AMD64")
+        
+        if (-not $isX86Compatible) {
+            print_warning ("IntelliJ IDEA requires x86/x64 architecture. Current: " + $arch)
+            print_info "Skipping IntelliJ IDEA installation on ARM/other architecture"
+        } else {
+            Install-PackageIfNotPresent -PackageName 'intellijidea-ultimate' -DisplayName 'IntelliJ IDEA Ultimate' -DetectionCommand $packageChecks['intellijidea-ultimate']
         }
     }
 
