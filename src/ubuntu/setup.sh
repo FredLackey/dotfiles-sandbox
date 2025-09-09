@@ -566,18 +566,205 @@ EOF
     print_success "Shell environment configured with Oh My Zsh"
 }
 
+# Install Neovim
+install_neovim() {
+    print_title "Neovim Installation"
+    
+    # Check if Neovim is already installed
+    if check_command nvim; then
+        local current_version=$(nvim --version 2>/dev/null | head -n1 | cut -d' ' -f2)
+        print_success "Neovim already installed (version $current_version)"
+        
+        # Check for updates
+        execute \
+            "sudo apt-get install -qqy --only-upgrade neovim" \
+            "Checking for Neovim updates"
+    else
+        # Add Neovim PPA for latest stable version
+        execute \
+            "sudo add-apt-repository -y ppa:neovim-ppa/stable" \
+            "Adding Neovim PPA repository"
+        
+        execute \
+            "sudo apt-get update -qq" \
+            "Updating package lists"
+        
+        # Install Neovim
+        execute \
+            "sudo apt-get install -qqy neovim" \
+            "Installing Neovim"
+        
+        if check_command nvim; then
+            local version=$(nvim --version 2>/dev/null | head -n1 | cut -d' ' -f2)
+            print_success "Neovim installed successfully (version $version)"
+        else
+            print_error "Failed to install Neovim"
+            return 1
+        fi
+    fi
+    
+    # Install dependencies for Neovim
+    install_neovim_dependencies
+    
+    # Configure Neovim
+    configure_neovim
+    
+    return 0
+}
+
+# Install Neovim dependencies
+install_neovim_dependencies() {
+    print_title "Neovim Dependencies"
+    
+    # Python support
+    if check_command python3; then
+        if ! python3 -c "import pynvim" 2>/dev/null; then
+            execute \
+                "pip3 install --user pynvim" \
+                "Installing Python Neovim support"
+        else
+            print_success "Python Neovim support already installed"
+        fi
+    fi
+    
+    # Node.js support (check if npm exists)
+    if check_command npm; then
+        if ! npm list -g neovim 2>/dev/null | grep -q neovim; then
+            execute \
+                "npm install -g neovim" \
+                "Installing Node.js Neovim support"
+        else
+            print_success "Node.js Neovim support already installed"
+        fi
+    else
+        print_warning "npm not found, skipping Node.js Neovim support"
+    fi
+    
+    # Install ripgrep for fast searching
+    if ! check_command rg; then
+        execute \
+            "sudo apt-get install -qqy ripgrep" \
+            "Installing ripgrep for fast searching"
+    else
+        print_success "ripgrep already installed"
+    fi
+    
+    # Install fd for file finding
+    if ! check_command fdfind && ! check_command fd; then
+        execute \
+            "sudo apt-get install -qqy fd-find" \
+            "Installing fd for file finding"
+        
+        # Create symlink for fd
+        if [ ! -L "$HOME/.local/bin/fd" ]; then
+            execute \
+                "mkdir -p '$HOME/.local/bin' && ln -s $(which fdfind) '$HOME/.local/bin/fd'" \
+                "Creating fd symlink"
+        fi
+    else
+        print_success "fd already installed"
+    fi
+    
+    # Install xclip for clipboard support (especially for WSL)
+    if [ -f /proc/version ] && grep -qi "microsoft\|wsl" /proc/version; then
+        if ! check_command xclip; then
+            execute \
+                "sudo apt-get install -qqy xclip xsel" \
+                "Installing clipboard utilities for WSL"
+        else
+            print_success "Clipboard utilities already installed"
+        fi
+    fi
+}
+
+# Configure Neovim
+configure_neovim() {
+    print_title "Neovim Configuration"
+    
+    local nvim_config_dir="$HOME/.config/nvim"
+    local nvim_source_dir="$SCRIPT_DIR/configs/nvim"
+    
+    # Create config directory if it doesn't exist
+    if [ ! -d "$nvim_config_dir" ]; then
+        execute \
+            "mkdir -p '$nvim_config_dir'" \
+            "Creating Neovim config directory"
+    fi
+    
+    # Copy Neovim configuration files
+    if [ -d "$nvim_source_dir" ]; then
+        # Copy entire nvim config structure
+        execute \
+            "cp -r '$nvim_source_dir'/* '$nvim_config_dir/'" \
+            "Installing Neovim configuration"
+        
+        print_success "Neovim configuration installed"
+        print_info "Run 'nvim' and wait for plugins to install on first launch"
+    else
+        print_warning "Neovim configuration files not found at $nvim_source_dir"
+    fi
+    
+    # Set Neovim as default editor if not already set
+    if ! grep -q "EDITOR=nvim" "$HOME/.bashrc" 2>/dev/null && \
+       ! grep -q "EDITOR=vim" "$HOME/.bashrc" 2>/dev/null; then
+        execute \
+            "echo 'export EDITOR=nvim' >> '$HOME/.bashrc'" \
+            "Setting Neovim as default editor"
+    fi
+    
+    # Add vi and vim aliases to use Neovim
+    if check_command zsh && [ -f "$HOME/.zshrc" ]; then
+        if ! grep -q "alias vi=nvim" "$HOME/.zshrc" 2>/dev/null; then
+            cat >> "$HOME/.zshrc" << 'EOF'
+
+# Neovim aliases
+alias vi='nvim'
+alias vim='nvim'
+EOF
+            print_success "Added Neovim aliases to .zshrc"
+        fi
+    fi
+}
+
 # Install text-based development environment (primary focus)
 install_text_based_dev_environment() {
     print_title "Text-Based Development Environment"
     
-    # Future installations will include:
-    # - Vim/Neovim as primary IDE
-    # - Vim plugins and configuration
-    # - Tmux for terminal multiplexing
-    # - Terminal-based file managers
-    # - Command-line development tools
+    # Install Neovim as primary IDE
+    install_neovim
     
-    print_info "Text-based development environment (coming soon)"
+    # Install tmux for terminal multiplexing
+    install_tmux
+    
+    # Future additions:
+    # - Terminal-based file managers
+    # - Additional command-line development tools
+    
+    print_success "Text-based development environment installed"
+}
+
+# Install tmux
+install_tmux() {
+    print_title "Tmux Installation"
+    
+    if check_command tmux; then
+        print_success "Tmux already installed"
+        execute \
+            "sudo apt-get install -qqy --only-upgrade tmux" \
+            "Checking for tmux updates"
+    else
+        execute \
+            "sudo apt-get install -qqy tmux" \
+            "Installing tmux"
+    fi
+    
+    # Copy tmux configuration if available
+    local tmux_config="$SCRIPT_DIR/configs/tmux/.tmux.conf"
+    if [ -f "$tmux_config" ]; then
+        execute \
+            "cp '$tmux_config' '$HOME/.tmux.conf'" \
+            "Installing tmux configuration"
+    fi
 }
 
 # Install programming languages and tools
