@@ -137,45 +137,65 @@ verify_wsl() {
 configure_locale() {
     print_title "System Locale Configuration"
     
-    # Check if locale is already properly configured
-    if locale 2>&1 | grep -q "Cannot set LC_ALL"; then
+    # First, check if en_US.UTF-8 locale exists
+    if ! locale -a 2>/dev/null | grep -q "^en_US.utf8"; then
         print_info "Configuring system locale..."
         
-        # Generate locale
+        # Install locales package if not present
+        if ! dpkg -l | grep -q "^ii  locales "; then
+            execute \
+                "sudo apt-get install -qqy locales" \
+                "Installing locales package"
+        fi
+        
+        # Generate locale (this may take a moment)
         execute \
             "sudo locale-gen en_US.UTF-8" \
             "Generating en_US.UTF-8 locale"
         
-        # Update locale
+        # Reconfigure locales
         execute \
-            "sudo update-locale LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8" \
-            "Setting default locale to en_US.UTF-8"
-        
-        # Set for current session
-        export LANG=en_US.UTF-8
-        export LC_ALL=en_US.UTF-8
-        
-        print_success "Locale configured"
+            "sudo dpkg-reconfigure --frontend=noninteractive locales" \
+            "Reconfiguring locales"
     else
-        # Verify locale is set to en_US.UTF-8
-        if ! locale | grep -q "LANG=en_US.UTF-8"; then
-            execute \
-                "sudo update-locale LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8" \
-                "Setting locale to en_US.UTF-8"
-            export LANG=en_US.UTF-8
-            export LC_ALL=en_US.UTF-8
-        else
-            print_success "Locale already configured"
-        fi
+        print_success "en_US.UTF-8 locale already exists"
     fi
+    
+    # Update default locale
+    execute \
+        "sudo update-locale LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 LANGUAGE=en_US:en" \
+        "Setting default locale to en_US.UTF-8"
+    
+    # Set for current session (without execute to avoid subshell issues)
+    export LANG=en_US.UTF-8
+    export LC_ALL=en_US.UTF-8
+    export LANGUAGE=en_US:en
     
     # Add locale exports to bashrc if not present
     if ! grep -q "export LANG=en_US.UTF-8" "$HOME/.bashrc" 2>/dev/null; then
-        echo '# System Locale' >> "$HOME/.bashrc"
-        echo 'export LANG=en_US.UTF-8' >> "$HOME/.bashrc"
-        echo 'export LC_ALL=en_US.UTF-8' >> "$HOME/.bashrc"
+        cat >> "$HOME/.bashrc" <<'EOF'
+
+# System Locale
+export LANG=en_US.UTF-8
+export LC_ALL=en_US.UTF-8
+export LANGUAGE=en_US:en
+EOF
         print_info "Added locale exports to .bashrc"
     fi
+    
+    # Also add to .profile for login shells
+    if ! grep -q "export LANG=en_US.UTF-8" "$HOME/.profile" 2>/dev/null; then
+        cat >> "$HOME/.profile" <<'EOF'
+
+# System Locale
+export LANG=en_US.UTF-8
+export LC_ALL=en_US.UTF-8
+export LANGUAGE=en_US:en
+EOF
+        print_info "Added locale exports to .profile"
+    fi
+    
+    print_success "Locale configured"
 }
 
 # Update package lists
