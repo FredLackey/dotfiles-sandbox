@@ -139,6 +139,7 @@ if (-not $Minimal) {
     InstallPackage "openjdk17" "OpenJDK 17"
     InstallPackage "maven" "Maven"
     InstallPackage "gradle" "Gradle"
+    InstallPackage "intellijidea-ultimate" "IntelliJ IDEA Ultimate"
     
     # .NET Tools
     WriteTitle ".NET Development Stack"

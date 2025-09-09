@@ -102,6 +102,7 @@ choco install pnpm -y             # Fast, disk space efficient package manager
 choco install openjdk17 -y       # OpenJDK 17 LTS
 choco install maven -y            # Apache Maven
 choco install gradle -y           # Gradle build tool
+choco install intellijidea-ultimate -y  # IntelliJ IDEA Ultimate (Professional Java IDE)
 
 # Container Tools
 choco install docker-desktop -y   # Docker Desktop for Windows

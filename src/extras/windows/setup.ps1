@@ -193,6 +193,7 @@ function main() {
         'openjdk17' = 'java -version'
         'maven' = 'mvn --version'
         'gradle' = 'gradle --version'
+        'intellijidea-ultimate' = 'Test-Path ($env:ProgramFiles + "\JetBrains\IntelliJ IDEA*\bin\idea64.exe")'
         'dotnet-sdk' = 'dotnet --version'
         'docker-desktop' = 'docker --version'
         'mongodb' = 'mongod --version'
@@ -331,11 +332,12 @@ function main() {
     # Install Java Development Tools
     if (-not $Minimal -and -not $SkipJava) {
         print_title "Java Development Stack"
-        foreach ($pkg in @('openjdk17', 'maven', 'gradle')) {
+        foreach ($pkg in @('openjdk17', 'maven', 'gradle', 'intellijidea-ultimate')) {
             $displayName = switch ($pkg) {
                 'openjdk17' { 'OpenJDK 17' }
                 'maven' { 'Maven' }
                 'gradle' { 'Gradle' }
+                'intellijidea-ultimate' { 'IntelliJ IDEA Ultimate' }
             }
             Install-PackageIfNotPresent -PackageName $pkg -DisplayName $displayName -DetectionCommand $packageChecks[$pkg]
         }

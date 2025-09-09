@@ -25,10 +25,11 @@ This directory contains PowerShell scripts that automate the installation and co
 - **OpenJDK 17** - Java Development Kit (LTS version)
 - **.NET SDK** - For C# and .NET development
 
-### Build Tools
+### Build Tools & IDEs
 - **Maven** - Java project management and build tool
 - **Gradle** - Modern build automation tool
 - **Make** - GNU Make for build automation
+- **IntelliJ IDEA Ultimate** - Professional Java IDE with enterprise features
 
 ### Container & Cloud Tools
 - **Docker Desktop** - Container platform for Windows
