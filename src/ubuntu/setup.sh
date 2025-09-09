@@ -262,15 +262,22 @@ configure_system() {
 configure_shell() {
     print_title "Shell Environment"
     
-    # Future configurations will include:
-    # - Bash enhancements (or ZSH if preferred)
-    # - Shell prompt customization
-    # - Aliases and functions for productivity
-    # - PATH modifications
-    # - Environment variables
-    # - Command history improvements
+    # Install and configure ZSH
+    if [ -f "$SCRIPT_DIR/steps/setup-zsh.sh" ]; then
+        bash "$SCRIPT_DIR/steps/setup-zsh.sh" || {
+            print_warning "ZSH setup encountered issues but continuing"
+        }
+    else
+        print_warning "ZSH setup script not found"
+    fi
     
-    print_info "Shell environment configuration (coming soon)"
+    # Future configurations will include:
+    # - Oh My Zsh framework
+    # - Additional shell enhancements
+    # - Custom aliases and functions
+    # - Advanced prompt themes
+    
+    print_info "Additional shell configurations (coming soon)"
 }
 
 # Install text-based development environment (primary focus)
