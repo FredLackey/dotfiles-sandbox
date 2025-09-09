@@ -977,20 +977,42 @@ install_nodejs() {
     if [ -s "$NVM_DIR/nvm.sh" ]; then
         print_info "Installing Node.js v${NODE_VERSION} using nvm..."
         
-        # Install the specified Node version
-        execute \
-            "nvm install ${NODE_VERSION}" \
-            "Installing Node.js v${NODE_VERSION}"
+        # Source nvm and install Node (can't use execute function due to subshell)
+        (
+            export NVM_DIR="$HOME/.nvm"
+            [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+            nvm install ${NODE_VERSION} >/dev/null 2>&1
+        )
+        if [ $? -eq 0 ]; then
+            print_success "Installing Node.js v${NODE_VERSION}"
+        else
+            print_error "Installing Node.js v${NODE_VERSION}"
+            return 1
+        fi
         
         # Use the installed version
-        execute \
-            "nvm use ${NODE_VERSION}" \
-            "Activating Node.js v${NODE_VERSION}"
+        (
+            export NVM_DIR="$HOME/.nvm"
+            [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+            nvm use ${NODE_VERSION} >/dev/null 2>&1
+        )
+        if [ $? -eq 0 ]; then
+            print_success "Activating Node.js v${NODE_VERSION}"
+        else
+            print_error "Activating Node.js v${NODE_VERSION}"
+        fi
         
         # Set as default
-        execute \
-            "nvm alias default ${NODE_VERSION}" \
-            "Setting Node.js v${NODE_VERSION} as default"
+        (
+            export NVM_DIR="$HOME/.nvm"
+            [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+            nvm alias default ${NODE_VERSION} >/dev/null 2>&1
+        )
+        if [ $? -eq 0 ]; then
+            print_success "Setting Node.js v${NODE_VERSION} as default"
+        else
+            print_error "Setting Node.js v${NODE_VERSION} as default"
+        fi
         
         # Verify installation
         if command -v node >/dev/null 2>&1; then
@@ -1154,15 +1176,20 @@ install_docker() {
     
     if check_command docker; then
         print_success "Docker already installed"
+        local docker_version=$(docker --version 2>/dev/null)
+        print_info "Version: $docker_version"
     else
         # Install Docker dependencies
         execute \
             "sudo apt-get install -qqy apt-transport-https ca-certificates curl gnupg lsb-release" \
             "Installing Docker dependencies"
         
-        # Add Docker's official GPG key
+        # Remove any existing Docker GPG key file first to avoid any prompts
+        sudo rm -f /usr/share/keyrings/docker-archive-keyring.gpg 2>/dev/null || true
+        
+        # Add Docker's official GPG key (using --batch and --yes to avoid all prompts)
         execute \
-            "curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg" \
+            "curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --batch --yes --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg" \
             "Adding Docker GPG key"
         
         # Set up the stable repository
