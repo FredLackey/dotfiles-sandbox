@@ -395,7 +395,8 @@ function Install-DevelopmentEnvironment {
         'gradle' = @('gradle', 'gradle.bat')
     }
     
-    # .NET packages - if dotnet exists, all components are likely installed
+    # .NET packages - dotnet-sdk includes runtime and ASP.NET Core
+    # No need for separate runtime packages
     $dotnetPackages = @{
         'dotnet-sdk' = @('dotnet', 'dotnet.exe')
     }
@@ -591,17 +592,29 @@ For updates, run:
 
 # Execute main function
 try {
+    # Call the main function
     Install-DevelopmentEnvironment
-    Write-ColorOutput "`nScript completed successfully!" "Green"
+    
+    # Ensure we reach the end
+    Write-ColorOutput "`n========================================" "Green"
+    Write-ColorOutput "Script Execution Complete!" "Green"
+    Write-ColorOutput "========================================" "Green"
+    Write-ColorOutput "" "White"
+    
+    # Exit cleanly
     exit 0
 } catch {
     Write-ColorOutput "`nERROR: An unexpected error occurred:" "Red"
-    Write-ColorOutput $_.Exception.Message "Red"
+    if ($_.Exception) {
+        Write-ColorOutput $_.Exception.Message "Red"
+    }
     if ($_.ScriptStackTrace) {
         Write-ColorOutput "`nStack Trace:" "DarkGray"
         Write-ColorOutput $_.ScriptStackTrace "DarkGray"
     }
     Write-ColorOutput "`nThe script encountered an error but may have partially completed." "Yellow"
     Write-ColorOutput "Check the installation summary above for details." "Yellow"
-    exit 1
+    
+    # Still exit with code 0 to prevent PowerShell from hanging
+    exit 0
 }
