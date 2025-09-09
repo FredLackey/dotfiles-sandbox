@@ -616,6 +616,24 @@ install_neovim() {
 install_neovim_dependencies() {
     print_title "Neovim Dependencies"
     
+    # Build essentials for compiling Treesitter parsers
+    if ! dpkg -l | grep -q "^ii  build-essential "; then
+        execute \
+            "sudo apt-get install -qqy build-essential" \
+            "Installing build essentials for Treesitter"
+    else
+        print_success "Build essentials already installed"
+    fi
+    
+    # Install gcc and g++ specifically if missing
+    if ! check_command gcc; then
+        execute \
+            "sudo apt-get install -qqy gcc g++" \
+            "Installing GCC compiler"
+    else
+        print_success "GCC compiler already installed"
+    fi
+    
     # Python support
     if check_command python3; then
         if ! python3 -c "import pynvim" 2>/dev/null; then
@@ -698,8 +716,14 @@ configure_neovim() {
             "cp -r '$nvim_source_dir'/* '$nvim_config_dir/'" \
             "Installing Neovim configuration"
         
+        # Make parser installation script executable if it exists
+        if [ -f "$nvim_config_dir/install-parsers.sh" ]; then
+            chmod +x "$nvim_config_dir/install-parsers.sh"
+        fi
+        
         print_success "Neovim configuration installed"
         print_info "Run 'nvim' and wait for plugins to install on first launch"
+        print_info "For additional language support, run: ~/.config/nvim/install-parsers.sh"
     else
         print_warning "Neovim configuration files not found at $nvim_source_dir"
     fi

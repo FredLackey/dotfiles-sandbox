@@ -7,34 +7,31 @@ return {
   event = { "BufReadPost", "BufNewFile" },
   dependencies = {
     "nvim-treesitter/nvim-treesitter-textobjects",
-    "windwp/nvim-ts-autotag",
   },
   config = function()
-    require("nvim-treesitter.configs").setup({
-      -- List of parsers to install
+    -- Disable auto-tag initially to avoid errors
+    local ok, configs = pcall(require, "nvim-treesitter.configs")
+    if not ok then
+      vim.notify("Treesitter not found!", vim.log.levels.ERROR)
+      return
+    end
+    
+    configs.setup({
+      -- Start with minimal parsers that usually compile without issues
       ensure_installed = {
         "bash",
-        "c",
-        "css",
-        "dockerfile",
-        "go",
-        "html",
-        "java",
-        "javascript",
-        "json",
         "lua",
-        "markdown",
-        "markdown_inline",
-        "python",
-        "rust",
-        "tsx",
-        "typescript",
         "vim",
         "vimdoc",
+        "json",
         "yaml",
+        "markdown",
+        "markdown_inline",
       },
-      -- Auto-install missing parsers when entering buffer
-      auto_install = true,
+      -- Don't auto-install to avoid compilation errors on first run
+      auto_install = false,
+      -- Install parsers synchronously (only applied to ensure_installed)
+      sync_install = false,
       -- Syntax highlighting
       highlight = {
         enable = true,
@@ -42,10 +39,6 @@ return {
       },
       -- Indentation based on treesitter
       indent = { 
-        enable = true 
-      },
-      -- Auto-tag for HTML/JSX
-      autotag = { 
         enable = true 
       },
       -- Incremental selection
