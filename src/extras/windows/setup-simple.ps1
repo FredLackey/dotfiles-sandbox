@@ -81,59 +81,65 @@ choco feature enable -n allowGlobalConfirmation -y 2>&1 | Out-Null
 choco config set commandExecutionTimeoutSeconds 14400 2>&1 | Out-Null
 WriteSuccess "Chocolatey configured"
 
-# Function to install package with retry
-function InstallPackage([string]$name, [string]$displayName, [int]$maxRetries = 2) {
-    if (-not $displayName) { $displayName = $name }
-    
+# Function to check if package is installed
+function IsPackageInstalled([string]$name) {
     # Check if already installed via choco
     $list = choco list --local-only 2>&1 | Out-String
     if ($list -match $name) {
-        WriteSuccess "$displayName is already installed via Chocolatey"
         return $true
     }
     
-    # Special checks for commonly pre-installed software
+    # Check if installed on system
     switch ($name) {
-        "git" {
-            if (Get-Command git -ErrorAction SilentlyContinue) {
-                WriteSuccess "Git is already installed on system"
-                return $true
-            }
+        "git" { return (Get-Command git -ErrorAction SilentlyContinue) -ne $null }
+        "vscode" { return (Get-Command code -ErrorAction SilentlyContinue) -ne $null }
+        "docker-desktop" { return (Get-Command docker -ErrorAction SilentlyContinue) -ne $null }
+        "python" { return (Get-Command python -ErrorAction SilentlyContinue) -ne $null }
+        "nodejs-lts" { return (Get-Command node -ErrorAction SilentlyContinue) -ne $null }
+        "yarn" { return (Get-Command yarn -ErrorAction SilentlyContinue) -ne $null }
+        "pnpm" { return (Get-Command pnpm -ErrorAction SilentlyContinue) -ne $null }
+        "curl" { return (Get-Command curl -ErrorAction SilentlyContinue) -ne $null }
+        "wget" { return (Get-Command wget -ErrorAction SilentlyContinue) -ne $null }
+        "jq" { return (Get-Command jq -ErrorAction SilentlyContinue) -ne $null }
+        "make" { return (Get-Command make -ErrorAction SilentlyContinue) -ne $null }
+        "gh" { return (Get-Command gh -ErrorAction SilentlyContinue) -ne $null }
+        "openjdk17" { return (Get-Command java -ErrorAction SilentlyContinue) -ne $null }
+        "maven" { return (Get-Command mvn -ErrorAction SilentlyContinue) -ne $null }
+        "gradle" { return (Get-Command gradle -ErrorAction SilentlyContinue) -ne $null }
+        "dotnet-sdk" { return (Get-Command dotnet -ErrorAction SilentlyContinue) -ne $null }
+        "7zip" { return (Test-Path "$env:ProgramFiles\7-Zip\7z.exe") -or (Get-Command 7z -ErrorAction SilentlyContinue) -ne $null }
+        "powershell-core" { return (Get-Command pwsh -ErrorAction SilentlyContinue) -ne $null }
+        "microsoft-windows-terminal" { 
+            return (Get-AppxPackage -Name Microsoft.WindowsTerminal -ErrorAction SilentlyContinue) -ne $null
         }
-        "vscode" {
-            if (Get-Command code -ErrorAction SilentlyContinue) {
-                WriteSuccess "Visual Studio Code is already installed on system"
-                return $true
-            }
-        }
-        "docker-desktop" {
-            if (Get-Command docker -ErrorAction SilentlyContinue) {
-                WriteSuccess "Docker Desktop is already installed on system"
-                return $true
-            }
-        }
-        "python" {
-            if (Get-Command python -ErrorAction SilentlyContinue) {
-                WriteSuccess "Python is already installed on system"
-                return $true
-            }
-        }
-        "nodejs-lts" {
-            if (Get-Command node -ErrorAction SilentlyContinue) {
-                WriteSuccess "Node.js is already installed on system"
-                return $true
-            }
-        }
+        "mongodb" { return (Get-Command mongod -ErrorAction SilentlyContinue) -ne $null }
+        "postgresql" { return (Get-Command psql -ErrorAction SilentlyContinue) -ne $null }
+        "dbeaver" { return (Test-Path "$env:ProgramFiles\DBeaver\dbeaver.exe") }
+        "postman" { return (Test-Path "$env:LocalAppData\Postman\Postman.exe") }
+        "insomnia-rest-api-client" { return (Test-Path "$env:LocalAppData\Insomnia\Insomnia.exe") }
+        default { return $false }
+    }
+}
+
+# Function to install package
+function InstallPackage([string]$name, [string]$displayName) {
+    if (-not $displayName) { $displayName = $name }
+    
+    # Check if already installed
+    if (-not $Force -and (IsPackageInstalled $name)) {
+        WriteSuccess "$displayName is already installed"
+        return
     }
     
+    WriteInfo "Installing $displayName..."
+    
     $retryCount = 0
+    $maxRetries = 2
     $installed = $false
     
     while ($retryCount -lt $maxRetries -and -not $installed) {
         if ($retryCount -gt 0) {
             WriteInfo "Retry attempt $retryCount for $displayName..."
-        } else {
-            WriteInfo "Installing $displayName..."
         }
         
         $result = choco install $name -y --no-progress --ignore-checksums --force 2>&1 | Out-String
@@ -150,58 +156,59 @@ function InstallPackage([string]$name, [string]$displayName, [int]$maxRetries = 
             $retryCount++
             if ($retryCount -ge $maxRetries) {
                 WriteError "Failed to install $displayName after $maxRetries attempts"
-                return $false
+                return
             }
             Start-Sleep -Seconds 2
         }
     }
-    return $installed
 }
 
 # Install Core Tools
 WriteTitle "Core Development Tools"
-$null = InstallPackage "git" "Git"
-$null = InstallPackage "vscode" "Visual Studio Code"
-$null = InstallPackage "7zip" "7-Zip"
-$null = InstallPackage "powershell-core" "PowerShell Core"
+InstallPackage "git" "Git"
+InstallPackage "vscode" "Visual Studio Code"
+InstallPackage "7zip" "7-Zip"
+InstallPackage "powershell-core" "PowerShell Core"
 
 # Windows Terminal special check
-$wt = Get-AppxPackage -Name Microsoft.WindowsTerminal -ErrorAction SilentlyContinue
-if ($wt) {
-    WriteSuccess "Windows Terminal is already installed"
+if (-not (Get-AppxPackage -Name Microsoft.WindowsTerminal -ErrorAction SilentlyContinue)) {
+    InstallPackage "microsoft-windows-terminal" "Windows Terminal"
 } else {
-    $null = InstallPackage "microsoft-windows-terminal" "Windows Terminal"
+    WriteSuccess "Windows Terminal is already installed"
 }
 
 if (-not $Minimal) {
     # Node.js Tools
     WriteTitle "Node.js Development Stack"
-    $null = InstallPackage "nodejs-lts" "Node.js LTS"
-    $null = InstallPackage "yarn" "Yarn"
-    $null = InstallPackage "pnpm" "pnpm"
+    InstallPackage "nodejs-lts" "Node.js LTS"
+    InstallPackage "yarn" "Yarn"
+    InstallPackage "pnpm" "pnpm"
     
     # TypeScript via npm
     if (Get-Command npm -ErrorAction SilentlyContinue) {
-        WriteInfo "Installing TypeScript..."
-        npm install -g typescript 2>&1 | Out-Null
-        if ($LASTEXITCODE -eq 0) {
-            WriteSuccess "TypeScript installed"
+        if (npm list -g typescript 2>&1 | Select-String "typescript@") {
+            WriteSuccess "TypeScript is already installed"
         } else {
-            # Retry with force
-            npm install -g typescript --force 2>&1 | Out-Null
+            WriteInfo "Installing TypeScript..."
+            npm install -g typescript 2>&1 | Out-Null
             if ($LASTEXITCODE -eq 0) {
-                WriteSuccess "TypeScript installed (forced)"
+                WriteSuccess "TypeScript installed"
             } else {
-                WriteError "TypeScript installation failed"
+                npm install -g typescript --force 2>&1 | Out-Null
+                if ($LASTEXITCODE -eq 0) {
+                    WriteSuccess "TypeScript installed (forced)"
+                } else {
+                    WriteError "TypeScript installation failed"
+                }
             }
         }
     }
     
     # Java Tools
     WriteTitle "Java Development Stack"
-    $null = InstallPackage "openjdk17" "OpenJDK 17"
-    $null = InstallPackage "maven" "Maven"
-    $null = InstallPackage "gradle" "Gradle"
+    InstallPackage "openjdk17" "OpenJDK 17"
+    InstallPackage "maven" "Maven"
+    InstallPackage "gradle" "Gradle"
     
     # IntelliJ IDEA Ultimate - Check architecture first
     WriteInfo "Checking system architecture for IntelliJ IDEA compatibility..."
@@ -216,81 +223,63 @@ if (-not $Minimal) {
         WriteWarning "IntelliJ IDEA requires x86/x64 architecture. Current architecture: $arch"
         WriteInfo "Skipping IntelliJ IDEA installation on ARM/other architecture"
     } else {
-        WriteInfo "Installing IntelliJ IDEA Ultimate..."
+        # Check if already installed
+        $ideaInstalled = $false
+        $ideaPaths = @(
+            "$env:ProgramFiles\JetBrains\IntelliJ IDEA*",
+            "${env:ProgramFiles(x86)}\JetBrains\IntelliJ IDEA*",
+            "$env:LocalAppData\JetBrains\Toolbox\apps\IDEA-U*"
+        )
         
-        # First try the standard package
-        $ideaInstalled = InstallPackage "intellijidea-ultimate" "IntelliJ IDEA Ultimate" 3
+        foreach ($path in $ideaPaths) {
+            if (Test-Path $path) {
+                $ideaInstalled = $true
+                break
+            }
+        }
         
-        # If that fails, try alternative approaches
-        if (-not $ideaInstalled) {
-            WriteInfo "Trying alternative installation for IntelliJ IDEA Ultimate..."
+        if ($ideaInstalled) {
+            WriteSuccess "IntelliJ IDEA is already installed"
+        } else {
+            InstallPackage "intellijidea-ultimate" "IntelliJ IDEA Ultimate"
             
-            # Try with different parameters
-            $result = choco install intellijidea-ultimate -y --ignore-checksums --allow-empty-checksums --force 2>&1 | Out-String
-            if ($LASTEXITCODE -eq 0 -or $result -match "already installed") {
-                WriteSuccess "IntelliJ IDEA Ultimate installed via alternative method"
-            } else {
-                # Try the community edition as fallback
-                WriteWarning "IntelliJ IDEA Ultimate installation failed, installing Community Edition instead..."
-                $communityResult = choco install intellijidea-community -y --no-progress --ignore-checksums --force 2>&1 | Out-String
-                if ($LASTEXITCODE -eq 0 -or $communityResult -match "already installed") {
-                    WriteSuccess "IntelliJ IDEA Community Edition installed as fallback"
-                    WriteInfo "You can upgrade to Ultimate Edition later if needed"
-                } else {
-                    WriteError "Could not install any version of IntelliJ IDEA"
-                }
+            # If Ultimate fails, try Community
+            if (-not (IsPackageInstalled "intellijidea-ultimate")) {
+                WriteWarning "IntelliJ IDEA Ultimate installation failed, trying Community Edition..."
+                InstallPackage "intellijidea-community" "IntelliJ IDEA Community"
             }
         }
     }
     
     # .NET Tools
     WriteTitle ".NET Development Stack"
-    $null = InstallPackage "dotnet-sdk" ".NET SDK"
+    InstallPackage "dotnet-sdk" ".NET SDK"
     
     # Additional Tools
     WriteTitle "Additional Utilities"
-    $null = InstallPackage "curl" "cURL"
-    $null = InstallPackage "wget" "wget"
-    $null = InstallPackage "jq" "jq"
-    $null = InstallPackage "make" "Make"
-    $null = InstallPackage "python" "Python"
-    $null = InstallPackage "gh" "GitHub CLI"
+    InstallPackage "curl" "cURL"
+    InstallPackage "wget" "wget"
+    InstallPackage "jq" "jq"
+    InstallPackage "make" "Make"
+    InstallPackage "python" "Python"
+    InstallPackage "gh" "GitHub CLI"
     
     if (-not $SkipDocker) {
         WriteTitle "Container Tools"
-        
-        # Check if Docker Desktop is already installed
-        $dockerInstalled = $false
-        
-        # Check common Docker Desktop installation indicators
-        if (Get-Command docker -ErrorAction SilentlyContinue) {
-            $dockerInstalled = $true
-        } elseif (Test-Path "$env:ProgramFiles\Docker\Docker\Docker Desktop.exe") {
-            $dockerInstalled = $true
-        } elseif (Test-Path "${env:ProgramFiles(x86)}\Docker\Docker\Docker Desktop.exe") {
-            $dockerInstalled = $true
-        } elseif (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object { $_.DisplayName -like "*Docker Desktop*" }) {
-            $dockerInstalled = $true
-        }
-        
-        if ($dockerInstalled) {
-            WriteSuccess "Docker Desktop is already installed"
-        } else {
-            $null = InstallPackage "docker-desktop" "Docker Desktop"
-        }
+        InstallPackage "docker-desktop" "Docker Desktop"
     }
     
     if (-not $SkipDatabases) {
         WriteTitle "Database Tools"
-        $null = InstallPackage "mongodb" "MongoDB"
-        $null = InstallPackage "postgresql" "PostgreSQL"
-        $null = InstallPackage "dbeaver" "DBeaver"
+        InstallPackage "mongodb" "MongoDB"
+        InstallPackage "postgresql" "PostgreSQL"
+        InstallPackage "dbeaver" "DBeaver"
     }
     
     # API Tools
     WriteTitle "API Development Tools"
-    $null = InstallPackage "postman" "Postman"
-    $null = InstallPackage "insomnia-rest-api-client" "Insomnia"
+    InstallPackage "postman" "Postman"
+    InstallPackage "insomnia-rest-api-client" "Insomnia"
 }
 
 # Post-installation
