@@ -151,8 +151,8 @@ install_homebrew() {
     print_info "This requires sudo access. Please enter your password when prompted."
     
     # Download and run the official Homebrew installer
-    # The installer needs to run interactively for sudo password
-    if ! NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"; then
+    # Run interactively to allow sudo password prompt
+    if ! /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"; then
         print_error "Homebrew installation failed"
         print_info "Please install Homebrew manually from https://brew.sh"
         exit 1
