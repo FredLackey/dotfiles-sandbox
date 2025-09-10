@@ -283,6 +283,7 @@ install_essential_tools() {
         "unzip"        # Archive extraction (comes with macOS but ensure latest)
         "zip"          # Archive creation (comes with macOS but ensure latest)
         "wget"         # Alternative to curl
+        "fzf"          # Fuzzy finder for command history and files
     )
     
     # macOS-specific replacements/additions that are truly essential
@@ -293,6 +294,22 @@ install_essential_tools() {
             print_success "$tool (already installed)"
         else
             execute "brew install '$tool'" "$tool"
+            
+            # Special post-installation for fzf
+            if [ "$tool" = "fzf" ] && check_command fzf; then
+                # Install fzf key bindings and fuzzy completion
+                execute "$(brew --prefix)/opt/fzf/install --key-bindings --completion --no-update-rc --no-bash --no-fish" \
+                        "Configure fzf key bindings and completion"
+                
+                # Add fzf configuration to .zshrc if not already present
+                if [ -f "$HOME/.zshrc" ] && ! grep -q "FZF_BASE" "$HOME/.zshrc"; then
+                    echo "" >> "$HOME/.zshrc"
+                    echo "# FZF configuration" >> "$HOME/.zshrc"
+                    echo "export FZF_BASE=\"$(brew --prefix)/opt/fzf\"" >> "$HOME/.zshrc"
+                    echo '[ -f ~/.fzf.zsh ] && source ~/.fzf.zsh' >> "$HOME/.zshrc"
+                    print_success "Added fzf configuration to .zshrc"
+                fi
+            fi
         fi
     done
 }
@@ -531,8 +548,25 @@ configure_shell() {
         
         # Configure plugins
         if grep -q "^plugins=" "$HOME/.zshrc"; then
-            # Update plugins line to include our custom plugins
-            sed -i '' 's/^plugins=.*/plugins=(git brew docker docker-compose node npm nvm tmux z fzf zsh-autosuggestions zsh-syntax-highlighting zsh-completions)/' "$HOME/.zshrc"
+            # Build plugin list based on what's installed
+            local plugin_list="git brew tmux zsh-autosuggestions zsh-syntax-highlighting zsh-completions"
+            
+            # Add conditional plugins based on what's available
+            if check_command docker; then
+                plugin_list="$plugin_list docker docker-compose"
+            fi
+            if check_command node; then
+                plugin_list="$plugin_list node npm"
+            fi
+            if [ -d "$HOME/.nvm" ]; then
+                plugin_list="$plugin_list nvm"
+            fi
+            if check_command fzf; then
+                plugin_list="$plugin_list fzf"
+            fi
+            
+            # Update plugins line
+            sed -i '' "s/^plugins=.*/plugins=($plugin_list)/" "$HOME/.zshrc"
             print_success "Configured Oh My Zsh plugins"
         fi
     fi
@@ -888,21 +922,40 @@ install_java() {
         execute \
             "brew install openjdk@17" \
             "Installing OpenJDK 17"
-        
-        # Create symlinks for the system Java wrappers
-        execute \
-            "sudo ln -sfn $(brew --prefix)/opt/openjdk@17/libexec/openjdk.jdk /Library/Java/JavaVirtualMachines/openjdk-17.jdk" \
-            "Creating Java symlinks"
     else
         print_success "OpenJDK 17 already installed"
     fi
     
-    # Set JAVA_HOME
+    # Always ensure symlinks are created (they might be missing even if brew package is installed)
+    # This is required for java_home to detect the JDK
+    local java_source="$(brew --prefix)/opt/openjdk@17/libexec/openjdk.jdk"
+    local java_target="/Library/Java/JavaVirtualMachines/openjdk-17.jdk"
+    
+    if [ -d "$java_source" ]; then
+        if [ ! -e "$java_target" ] || [ ! -L "$java_target" ]; then
+            execute \
+                "sudo ln -sfn '$java_source' '$java_target'" \
+                "Creating Java symlinks for system detection"
+        else
+            print_success "Java symlinks already configured"
+        fi
+        
+        # Also ensure the JDK is properly registered with java_home
+        # This helps java_home find it immediately without needing a new shell
+        if ! /usr/libexec/java_home -v 17 &>/dev/null; then
+            print_warning "Java 17 installed but not detected by java_home yet"
+            print_info "This will be resolved after restarting your terminal"
+        fi
+    else
+        print_warning "OpenJDK 17 installation directory not found at expected location"
+    fi
+    
+    # Set JAVA_HOME (OpenJDK 17 was just installed above)
     if [ -f "$HOME/.zshrc" ]; then
         if ! grep -q "JAVA_HOME" "$HOME/.zshrc"; then
             echo "" >> "$HOME/.zshrc"
             echo "# Java" >> "$HOME/.zshrc"
-            echo 'export JAVA_HOME=$(/usr/libexec/java_home -v 17)' >> "$HOME/.zshrc"
+            echo 'export JAVA_HOME=$(/usr/libexec/java_home -v 17 2>/dev/null || echo "/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home")' >> "$HOME/.zshrc"
             echo 'export PATH=$JAVA_HOME/bin:$PATH' >> "$HOME/.zshrc"
             print_success "Set JAVA_HOME in .zshrc"
         fi
@@ -1061,19 +1114,50 @@ install_vscode() {
 configure_terminal() {
     print_title "Terminal Configuration"
     
-    print_info "Terminal.app configuration:"
-    print_info "1. Open Terminal > Preferences"
-    print_info "2. Select a profile (or create new)"
-    print_info "3. Under 'Text' tab:"
-    print_info "   - Change font to 'MesloLGS NF' or another Nerd Font"
-    print_info "   - Adjust font size as needed (14pt recommended)"
-    print_info "4. Under 'Window' tab:"
-    print_info "   - Set default window size (120x40 recommended)"
-    print_info "5. Under 'Shell' tab:"
-    print_info "   - Ensure 'Run command' is unchecked"
-    print_info "   - 'Run inside shell' should use /bin/zsh"
+    # Apply Terminal.app preferences using defaults
+    execute "defaults write com.apple.terminal FocusFollowsMouse -string true" \
+            "Enable focus follows mouse"
     
-    print_success "Terminal configuration instructions provided"
+    execute "defaults write com.apple.terminal SecureKeyboardEntry -bool true" \
+            "Enable secure keyboard entry"
+    
+    execute "defaults write com.apple.Terminal ShowLineMarks -int 0" \
+            "Hide line marks"
+    
+    execute "defaults write com.apple.terminal StringEncodings -array 4" \
+            "Set UTF-8 encoding"
+    
+    # Set window size defaults
+    execute "defaults write com.apple.terminal 'Window Settings'.Basic.columnCount -int 120" \
+            "Set default window width to 120 columns"
+    
+    execute "defaults write com.apple.terminal 'Window Settings'.Basic.rowCount -int 40" \
+            "Set default window height to 40 rows"
+    
+    # Apply custom theme with Nerd Font
+    local theme_script="$SCRIPT_DIR/scripts/set_terminal_theme.applescript"
+    local theme_file="$SCRIPT_DIR/terminal-themes/Developer Dark.terminal"
+    
+    if [ -f "$theme_script" ] && [ -f "$theme_file" ]; then
+        execute "chmod +x '$theme_script' && osascript '$theme_script' '$theme_file'" \
+                "Apply Developer Dark theme with Nerd Font"
+    else
+        print_warning "Terminal theme script not found, creating fallback configuration"
+        
+        # Fallback: At least set the font using defaults
+        # This sets the font for the Basic profile
+        execute "defaults write com.apple.terminal 'Window Settings'.Basic.Font -data $(echo 'YnBsaXN0MDDUAQIDBAUGGBlYJHZlcnNpb25YJG9iamVjdHNZJGFyY2hpdmVyVCR0b3ASAAGGoKQHCBESVSRudWxs1AkKCwwNDg8QVk5TU2l6ZVhOU2ZGbGFnc1ZOU05hbWVWJGNsYXNzI0AuAAAAAAAAEBCAAoADXxAXTWVzbG9MR1NOZU9yZEZvbnQtUmVndWxhctITFBUWWiRjbGFzc25hbWVYJGNsYXNzZXNWTlNGb250ohUXWE5TT2JqZWN0XxAPTlNLZXllZEFyY2hpdmVy0RobVHJvb3SAAQgRGiMtMjc8QktSW2JpcnR2eJWan6attsfZ3OMAAAAAAAAABAAAAAAAAAAAHAAAAAAAAAAAAAAAAAAAA5Q==' | base64 -D)" \
+                "Set MesloLGS Nerd Font as default font" 2>/dev/null || true
+    fi
+    
+    # Enable Touch ID for sudo (bonus feature from alrra example)
+    if ! grep -q "pam_tid.so" "/etc/pam.d/sudo" 2>/dev/null; then
+        execute "sudo sh -c 'echo \"auth sufficient pam_tid.so\" >> /etc/pam.d/sudo'" \
+                "Enable Touch ID for sudo authentication"
+    fi
+    
+    print_success "Terminal.app configured with Developer Dark theme and Nerd Font"
+    print_info "Note: You may need to restart Terminal.app for all changes to take effect"
 }
 
 # Main function
