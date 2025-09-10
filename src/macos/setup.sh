@@ -270,32 +270,23 @@ install_essential_tools() {
         return 1
     fi
     
+    # Match Ubuntu's essential tools list
     local tools=(
-        "coreutils"    # GNU core utilities
-        "findutils"    # GNU find, locate, updatedb, xargs
-        "grep"         # GNU grep
-        "gnu-sed"      # GNU sed
-        "gawk"         # GNU awk
         "tree"         # Directory listing
         "htop"         # Process viewer
         "ncdu"         # Disk usage analyzer
         "tmux"         # Terminal multiplexer
         "screen"       # Terminal multiplexer alternative
         "vim"          # Text editor
-        "neovim"       # Modern vim
+        "nano"         # Simple text editor (comes with macOS but ensure latest)
         "jq"           # JSON processor
-        "yq"           # YAML processor
+        "unzip"        # Archive extraction (comes with macOS but ensure latest)
+        "zip"          # Archive creation (comes with macOS but ensure latest)
         "wget"         # Alternative to curl
-        "unzip"        # Archive extraction
-        "zip"          # Archive creation
-        "ripgrep"      # Fast grep alternative
-        "fd"           # Fast find alternative
-        "bat"          # Better cat
-        "exa"          # Better ls
-        "fzf"          # Fuzzy finder
-        "z"            # Directory jumper
-        "tldr"         # Simplified man pages
     )
+    
+    # macOS-specific replacements/additions that are truly essential
+    # net-tools equivalent functionality is built into macOS
     
     for tool in "${tools[@]}"; do
         if brew list "$tool" &>/dev/null; then
