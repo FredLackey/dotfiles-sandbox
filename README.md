@@ -13,7 +13,7 @@ The goal is to transform a fresh OS installation into a fully-configured develop
 Currently supported environments:
 1. **Windows WSL running Ubuntu** - Windows Subsystem for Linux with Ubuntu distribution
 2. **Ubuntu Server 22.04 LTS** - Standalone Ubuntu server installations  
-3. **macOS 15 (Sequoia)** - Current macOS desktop systems
+3. **macOS 15 (Sequoia)** - Current macOS desktop systems with Homebrew package management
 
 Future platforms (planned after initial three are complete):
 - **RHEL (Red Hat Enterprise Linux)** - Enterprise Linux distributions
@@ -36,18 +36,17 @@ Future platforms (planned after initial three are complete):
 ### Active Development
 
 - **`src/`** - Main source code and configuration files for dotfiles installation
-- **`scripts/`** - Repository-level utilities (git operations, documentation updates, etc.)
+- **`docs/`** - Project documentation and implementation guides
+- **`knowledge/`** - Reference materials and configuration guides for tools and technologies
 
 #### Source Organization (`src/`)
 
 The source directory is organized by platform specificity:
 
-- **`src/common/`** - Shared configurations that work across platforms
-  - Shell configurations (primarily zsh interactive, bash scripts) targeting common platform features
-  - Universal aliases, functions, and exports
-  - Cross-platform compatible settings
-  - Developer productivity aliases and functions
-  - Git workflow optimizations
+- **`src/common/`** - Shared utilities that work across platforms
+  - Common utility functions for setup scripts
+  - Cross-platform helper functions
+  - Shared setup logic
 
 - **`src/macos/`** - macOS-specific implementations
   - Homebrew package installations
@@ -59,19 +58,22 @@ The source directory is organized by platform specificity:
   - Database clients and tools
 
 - **`src/ubuntu/`** - Ubuntu-specific implementations  
-  - APT package management
-  - Development tools: Node.js (via NodeSource), npm, OpenJDK, Maven, Gradle
-  - Text-based IDE: NeoVim with custom IDE configuration, tmux for session management
-  - Build essentials and compilation tools
-  - Docker and container runtime
-  - Database tools and clients
-  - Server-specific developer utilities
+  - APT package management and system configuration
+  - Development tools: Node.js (via nvm), npm/yarn/pnpm, OpenJDK 17, Maven, Gradle
+  - Text-based IDE: NeoVim with multiple configuration options (minimal, full, IDE)
+  - Complete configuration files in `configs/` directory:
+    - Multiple NeoVim configurations (nvim, nvim-ide, nvim-minimal)
+    - Oh My Zsh and ZSH templates and configurations
+    - Tmux configuration with productivity enhancements
+  - Build essentials, Docker, and LSP servers for development
+  - Python development tools and language servers
 
-- **`src/wsl/`** - WSL-specific implementations (planned)
+- **`src/wsl/`** - WSL-specific implementations
   - Ubuntu base with Windows interoperability
   - Development tools matching Ubuntu Server
   - Special handling for Windows filesystem integration
   - WSL-specific optimizations for cross-platform development
+  - Windows clipboard integration and aliases
 
 #### Platform Strategy
 
@@ -85,15 +87,17 @@ Each of our three target platforms has its own independent folder with complete,
 - **Simplicity over DRY** - we prioritize maintainability and clarity over avoiding duplication
 - **WSL-specific considerations** - WSL Ubuntu may have unique scripts for Windows interoperability
 
-#### Repository Scripts (`scripts/`)
+#### Additional Components
 
-The scripts folder contains repository maintenance utilities:
-- Git workflow automation
-- Documentation generation
-- Code quality checks
-- Repository maintenance tasks
+- **`src/extras/`** - Additional platform-specific tools and utilities
+  - Windows PowerShell scripts for Windows-native setup
+  - Alternative installation methods
+  - Supplementary tools and configurations
 
-**Note**: Repository scripts are distinct from installation scripts and do not perform any system configuration.
+- **`src/utils/`** - Core utility functions used by platform setup scripts
+  - OS detection and environment verification
+  - Common output formatting and execution functions
+  - Shared helper functions for all platform scripts
 
 ### Reference Materials
 
@@ -113,10 +117,17 @@ The following directories contain reference materials that can be learned from b
 - **Uses source methodology** that makes scripts difficult to test in isolation
 - Contains working examples but follows outdated practices that conflict with current architecture
 
-#### _archive
-- Previous attempt at dotfiles automation (auto-generated, undocumented)
-- **DO NOT TRUST** - contains bloated, undocumented code
-- Kept for reference of what NOT to do
+### Documentation and Knowledge Base
+
+- **`docs/`** - Contains comprehensive project documentation:
+  - `FOLDER_STRUCTURE.md` - Detailed explanation of the project organization
+  - `INSTALLATION_PROCESS.md` - Step-by-step installation and configuration guides
+
+- **`knowledge/`** - Reference materials for tools and technologies used:
+  - Configuration guides for Oh My Zsh, Neovim, Chocolatey
+  - Shell comparison and theme configuration
+  - Tool-specific setup and customization instructions
+  - Best practices and troubleshooting guides
 
 > ⚠️ **Important Script Methodology Difference**:
 > - **_examples/alrra and _legacy use source-based scripts** where files source each other
@@ -130,9 +141,11 @@ The following directories contain reference materials that can be learned from b
 ### Current Focus
 - **Three target environments**: Windows WSL Ubuntu, Ubuntu Server 22.04 LTS, macOS 15
 - **Developer productivity**: Automated setup of complete development environments
-- **Full-stack readiness**: Node.js, npm, Java, build tools, containers, databases
+- **Full-stack readiness**: Node.js (via nvm), Java 17, build tools, containers, LSP servers
 - **IDE mastery**: NeoVim configured as a powerful IDE for text-based development
-  - Custom configuration tailored for our development needs
+  - Multiple configuration tiers: minimal (basic), full (with plugins), IDE (with LSP)
+  - Language servers for TypeScript, Python, Java, Bash, YAML, JSON, and Lua
+  - File explorer (neo-tree), fuzzy finder (telescope), git integration (lazygit)
   - Works consistently across SSH sessions, containers, and local terminals
   - No dependency on pre-built distributions - full control over our setup
 - Clean, documented, and maintainable code
@@ -180,16 +193,27 @@ The setup script will:
 7. Configure your entire development environment without any prompts or manual intervention
 
 **What gets installed:**
-- **Development runtimes**: Node.js, npm/yarn, Java JDK, Python
-- **Build tools**: Maven, Gradle, Make, gcc/g++
-- **Version control**: Git with enhanced configuration
-- **Containers**: Docker, docker-compose
-- **Primary IDE**: NeoVim with custom configuration for full IDE capabilities (all platforms)
+- **Development runtimes**: Node.js v20 LTS (via nvm), npm/yarn/pnpm, Java JDK 17, Python 3
+- **Build tools**: Maven, Gradle, Make, cmake, build-essential, autoconf
+- **Version control**: Git with enhanced configuration, lazygit GUI
+- **Containers**: Docker CE (Ubuntu/WSL) or Docker Desktop (macOS)
+- **Primary IDE**: NeoVim with tiered configurations
+  - **Minimal**: Basic Neovim with essential plugins
+  - **Full**: Complete setup with Treesitter and advanced plugins  
+  - **IDE**: Full LSP integration with language servers, debugging, and formatting
+  - File explorer (neo-tree), fuzzy finder (telescope), git integration
 - **Supplementary editor**: VS Code (macOS only, for GUI convenience)
-- **Terminal tools**: tmux, zsh with productivity features
-- **Database tools**: PostgreSQL client, MySQL client, Redis tools
-- **Cloud CLIs**: AWS CLI, Azure CLI (optional)
-- **Developer utilities**: jq, httpie, curl, wget, tree, htop
+- **Terminal environment**: 
+  - ZSH with Oh My Zsh framework and productivity plugins
+  - tmux with custom configuration for session management
+  - Powerline fonts and themes for enhanced terminal experience
+- **Language servers**: TypeScript, Python, Bash, YAML, JSON, Lua, HTML/CSS
+- **Code tools**: Prettier, Black, ESLint, ripgrep, fd-find, fzf, xclip
+- **Platform-specific enhancements**:
+  - macOS: Homebrew packages, Terminal.app themes, Touch ID for sudo
+  - WSL: Windows interoperability, clipboard integration, locale configuration
+  - Ubuntu: APT packages, systemd integration, swap configuration
+- **Developer utilities**: jq, curl, wget, tree, htop, ncdu
 
 **Important**: Setup scripts will run completely unattended - no user interaction required. The goal is to configure a new machine from start to finish without prompts or manual intervention.
 
@@ -248,7 +272,7 @@ fi
 
 ## Getting Started
 
-This project is currently in active development. Setup scripts and documentation will be added as features are implemented.
+The repository includes complete, working setup scripts for all three target platforms. Each platform script installs and configures a full development environment without requiring user interaction during the installation process.
 
 ## Contributing
 
