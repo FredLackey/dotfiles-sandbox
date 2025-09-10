@@ -1135,12 +1135,26 @@ configure_terminal() {
             "Set default window height to 40 rows"
     
     # Apply custom theme with Nerd Font
-    local theme_script="$SCRIPT_DIR/scripts/set_terminal_theme.applescript"
-    local theme_file="$SCRIPT_DIR/terminal-themes/Developer Dark.terminal"
-    
-    if [ -f "$theme_script" ] && [ -f "$theme_file" ]; then
-        execute "chmod +x '$theme_script' && osascript '$theme_script' '$theme_file'" \
-                "Apply Developer Dark theme with Nerd Font"
+    if [ -f "$SCRIPT_DIR/terminal-themes/Developer Dark.terminal" ]; then
+        # First, update the theme to use MesloLGS Nerd Font
+        if [ -f "$SCRIPT_DIR/scripts/update_terminal_font.sh" ]; then
+            chmod +x "$SCRIPT_DIR/scripts/update_terminal_font.sh"
+            execute "bash '$SCRIPT_DIR/scripts/update_terminal_font.sh' '$SCRIPT_DIR/terminal-themes/Developer Dark.terminal'" \
+                    "Configure MesloLGS Nerd Font in theme"
+        fi
+        
+        # Copy the AppleScript to the themes directory temporarily (following alrra's approach)
+        cp "$SCRIPT_DIR/scripts/set_terminal_theme.applescript" "$SCRIPT_DIR/terminal-themes/" 2>/dev/null
+        
+        # Change to the themes directory and run the script
+        (
+            cd "$SCRIPT_DIR/terminal-themes"
+            execute "./set_terminal_theme.applescript" \
+                    "Apply Developer Dark theme with Nerd Font"
+        )
+        
+        # Clean up the temporary AppleScript copy
+        rm -f "$SCRIPT_DIR/terminal-themes/set_terminal_theme.applescript" 2>/dev/null
     else
         print_warning "Terminal theme script not found, creating fallback configuration"
         
