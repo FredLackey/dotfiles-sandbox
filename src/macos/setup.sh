@@ -148,33 +148,43 @@ install_homebrew() {
     fi
     
     print_info "Installing Homebrew..."
+    print_info "This requires sudo access. Please enter your password when prompted."
     
-    # Download and run the official Homebrew installer non-interactively
-    NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" 2>&1 | while read -r line; do
-        print_info "  $line"
-    done
+    # Download and run the official Homebrew installer
+    # The installer needs to run interactively for sudo password
+    if ! NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"; then
+        print_error "Homebrew installation failed"
+        print_info "Please install Homebrew manually from https://brew.sh"
+        exit 1
+    fi
     
-    # Determine Homebrew location based on architecture
+    # Determine Homebrew location based on architecture and add to current session
     local brew_path=""
     if [ -f "/opt/homebrew/bin/brew" ]; then
         # Apple Silicon
         brew_path="/opt/homebrew/bin/brew"
+        print_info "Configuring Homebrew for Apple Silicon..."
         eval "$($brew_path shellenv)"
     elif [ -f "/usr/local/bin/brew" ]; then
         # Intel Mac
         brew_path="/usr/local/bin/brew"
-        export PATH="/usr/local/bin:$PATH"
-    fi
-    
-    if [ -z "$brew_path" ]; then
+        print_info "Configuring Homebrew for Intel Mac..."
+        eval "$($brew_path shellenv)"
+    else
         print_error "Failed to find Homebrew installation"
-        return 1
+        print_info "Please check if Homebrew was installed correctly"
+        exit 1
     fi
     
-    # Add Homebrew to shell profiles
+    # Add Homebrew to shell profiles for future sessions
     for profile_file in "$HOME/.zprofile" "$HOME/.bash_profile" "$HOME/.profile"; do
-        if [ -f "$profile_file" ] || [ "$profile_file" = "$HOME/.zprofile" ]; then
-            if ! grep -q "$brew_path" "$profile_file" 2>/dev/null; then
+        if [ ! -f "$profile_file" ] && [ "$profile_file" = "$HOME/.zprofile" ]; then
+            # Create .zprofile if it doesn't exist (it's the main one for macOS)
+            touch "$profile_file"
+        fi
+        
+        if [ -f "$profile_file" ]; then
+            if ! grep -q "homebrew" "$profile_file" 2>/dev/null; then
                 echo "" >> "$profile_file"
                 echo "# Homebrew" >> "$profile_file"
                 echo "eval \"\$($brew_path shellenv)\"" >> "$profile_file"
@@ -183,20 +193,27 @@ install_homebrew() {
         fi
     done
     
-    # Verify installation
+    # Verify installation in current session
     if check_command brew; then
         print_success "Homebrew installed successfully"
         local brew_version=$(brew --version 2>/dev/null | head -n1)
         print_info "$brew_version"
     else
-        print_error "Homebrew installation failed"
-        return 1
+        print_error "Homebrew was installed but is not available in current session"
+        print_info "Please restart your terminal or run: eval \"\$($brew_path shellenv)\""
+        exit 1
     fi
 }
 
 # Install Git via Homebrew
 install_git() {
     print_title "Git & Build Essentials"
+    
+    # Ensure brew is available
+    if ! check_command brew; then
+        print_error "Homebrew is not available. Cannot install Git."
+        return 1
+    fi
     
     # Check if git is already installed via Homebrew
     if brew list git &>/dev/null; then
@@ -224,6 +241,12 @@ install_git() {
 # Install essential command-line tools
 install_essential_tools() {
     print_title "Essential Tools"
+    
+    # Ensure brew is available
+    if ! check_command brew; then
+        print_error "Homebrew is not available. Cannot install essential tools."
+        return 1
+    fi
     
     local tools=(
         "coreutils"    # GNU core utilities
