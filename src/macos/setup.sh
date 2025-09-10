@@ -500,10 +500,11 @@ install_powerline_fonts() {
         "Adding fonts tap"
     
     # Install popular programming fonts with Powerline support
+    # Note: Homebrew font cask names have changed over time
     local fonts=(
-        "font-meslo-lg-nerd-font"
-        "font-hack-nerd-font"
-        "font-fira-code-nerd-font"
+        "font-meslo-lg-nerd-font"      # Primary font for terminal
+        "font-meslo-for-powerline"     # Fallback if nerd font cask fails
+        "font-hack-nerd-font"          # Alternative font
     )
     
     for font in "${fonts[@]}"; do

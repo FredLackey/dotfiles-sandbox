@@ -20,7 +20,9 @@
       "mcp__firecrawl__firecrawl_search",
       "mcp__firecrawl__firecrawl_scrape",
       "Bash(perl:*)",
-      "Bash(plutil:*)"
+      "Bash(plutil:*)",
+      "Read(//System/Library/Fonts/**)",
+      "Bash(brew list:*)"
     ],
     "deny": [],
     "ask": []
