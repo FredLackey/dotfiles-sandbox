@@ -532,7 +532,7 @@ configure_shell() {
         # Configure plugins
         if grep -q "^plugins=" "$HOME/.zshrc"; then
             # Update plugins line to include our custom plugins
-            sed -i '' 's/^plugins=.*/plugins=(git brew docker docker-compose node npm nvm python pip virtualenv tmux z fzf zsh-autosuggestions zsh-syntax-highlighting zsh-completions)/' "$HOME/.zshrc"
+            sed -i '' 's/^plugins=.*/plugins=(git brew docker docker-compose node npm nvm tmux z fzf zsh-autosuggestions zsh-syntax-highlighting zsh-completions)/' "$HOME/.zshrc"
             print_success "Configured Oh My Zsh plugins"
         fi
     fi
@@ -574,17 +574,6 @@ install_neovim() {
 # Install Neovim dependencies
 install_neovim_dependencies() {
     print_title "Neovim Dependencies"
-    
-    # Python support
-    if check_command python3; then
-        if ! python3 -c "import pynvim" 2>/dev/null; then
-            execute \
-                "pip3 install --user pynvim" \
-                "Installing Python Neovim support"
-        else
-            print_success "Python Neovim support already installed"
-        fi
-    fi
     
     # Node support
     if check_command npm; then
@@ -728,8 +717,6 @@ install_programming_tools() {
     # Install Java development tools
     install_java || print_warning "Java installation had issues, continuing..."
     
-    # Install Python development tools
-    install_python_dev || print_warning "Python tools installation had issues, continuing..."
     
     # Install Docker (for containerized development)
     install_docker || print_warning "Docker installation had issues, continuing..."
@@ -937,50 +924,6 @@ install_java() {
             "Installing Gradle"
     else
         print_success "Gradle already installed"
-    fi
-}
-
-# Install Python development tools
-install_python_dev() {
-    print_title "Python Development Tools"
-    
-    # Install Python 3 via Homebrew (macOS comes with Python but brew version is better)
-    if ! brew list python@3.12 &>/dev/null; then
-        execute \
-            "brew install python@3.12" \
-            "Installing Python 3.12"
-    else
-        print_success "Python 3.12 already installed"
-    fi
-    
-    # Install pip packages
-    local python_packages=(
-        "black"          # Code formatter
-        "pylint"         # Linter
-        "mypy"           # Type checker
-        "pytest"         # Testing framework
-        "ipython"        # Enhanced Python shell
-        "virtualenv"     # Virtual environment
-        "pipenv"         # Package management
-    )
-    
-    for package in "${python_packages[@]}"; do
-        if pip3 show "$package" &>/dev/null; then
-            print_success "$package (already installed)"
-        else
-            execute \
-                "pip3 install --user '$package'" \
-                "Installing $package"
-        fi
-    done
-    
-    # Install Python LSP server
-    if ! pip3 show python-lsp-server &>/dev/null; then
-        execute \
-            "pip3 install --user 'python-lsp-server[all]'" \
-            "Installing Python Language Server"
-    else
-        print_success "Python Language Server already installed"
     fi
 }
 
