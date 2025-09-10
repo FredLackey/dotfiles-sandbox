@@ -1134,23 +1134,17 @@ configure_terminal() {
     execute "defaults write com.apple.terminal 'Window Settings'.Basic.rowCount -int 40" \
             "Set default window height to 40 rows"
     
-    # Apply custom theme with Nerd Font
-    if [ -f "$SCRIPT_DIR/terminal-themes/Developer Dark.terminal" ]; then
-        # First, update the theme to use MesloLGS Nerd Font
-        if [ -f "$SCRIPT_DIR/scripts/update_terminal_font.sh" ]; then
-            chmod +x "$SCRIPT_DIR/scripts/update_terminal_font.sh"
-            execute "bash '$SCRIPT_DIR/scripts/update_terminal_font.sh' '$SCRIPT_DIR/terminal-themes/Developer Dark.terminal'" \
-                    "Configure MesloLGS Nerd Font in theme"
-        fi
-        
-        # Copy the AppleScript to the themes directory temporarily (following alrra's approach)
+    # Apply custom theme (following alrra's exact approach)
+    if [ -f "$SCRIPT_DIR/terminal-themes/Developer Dark.terminal" ] && [ -f "$SCRIPT_DIR/scripts/set_terminal_theme.applescript" ]; then
+        # Copy the AppleScript to the themes directory (alrra runs it from same dir as theme)
         cp "$SCRIPT_DIR/scripts/set_terminal_theme.applescript" "$SCRIPT_DIR/terminal-themes/" 2>/dev/null
+        chmod +x "$SCRIPT_DIR/terminal-themes/set_terminal_theme.applescript"
         
         # Change to the themes directory and run the script
         (
             cd "$SCRIPT_DIR/terminal-themes"
             execute "./set_terminal_theme.applescript" \
-                    "Apply Developer Dark theme with Nerd Font"
+                    "Apply Developer Dark theme"
         )
         
         # Clean up the temporary AppleScript copy

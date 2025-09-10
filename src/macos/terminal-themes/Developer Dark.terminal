@@ -175,10 +175,6 @@
 	<integer>1</integer>
 	<key>type</key>
 	<string>Window Settings</string>
-	<key>columnCount</key>
-	<integer>120</integer>
-	<key>rowCount</key>
-	<integer>40</integer>
 	<key>whiteColour</key>
 	<data>
 	BAtzdHJlYW10eXBlZIHoA4QBQISEhAdOU0NvbG9yAISECE5TT2JqZWN0AIWEAWMBhARm
