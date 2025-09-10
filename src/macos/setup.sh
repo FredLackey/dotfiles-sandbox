@@ -1149,6 +1149,13 @@ configure_terminal() {
         
         # Clean up the temporary AppleScript copy
         rm -f "$SCRIPT_DIR/terminal-themes/set_terminal_theme.applescript" 2>/dev/null
+        
+        # Now set the Nerd Font for the theme
+        if [ -f "$SCRIPT_DIR/scripts/set_nerd_font.sh" ]; then
+            chmod +x "$SCRIPT_DIR/scripts/set_nerd_font.sh"
+            execute "bash '$SCRIPT_DIR/scripts/set_nerd_font.sh'" \
+                    "Set MesloLGS Nerd Font for Terminal"
+        fi
     else
         print_warning "Terminal theme script not found, creating fallback configuration"
         
@@ -1164,8 +1171,9 @@ configure_terminal() {
                 "Enable Touch ID for sudo authentication"
     fi
     
-    print_success "Terminal.app configured with Developer Dark theme and Nerd Font"
+    print_success "Terminal.app configured with Developer Dark theme and MesloLGS Nerd Font"
     print_info "Note: You may need to restart Terminal.app for all changes to take effect"
+    print_info "The Powerline glyphs in your prompt should now display correctly"
 }
 
 # Main function
