@@ -74,6 +74,27 @@ check_command() {
     command -v "$1" >/dev/null 2>&1
 }
 
+# Ask for sudo password upfront and keep it alive
+ask_for_sudo() {
+    # Ask for the administrator password upfront
+    print_info "Administrator privileges will be required..."
+    
+    # Check if we have sudo access
+    if ! sudo -v; then
+        print_error "Failed to obtain administrator privileges"
+        exit 1
+    fi
+    
+    # Keep sudo alive until the script finishes
+    while true; do
+        sudo -n true
+        sleep 60
+        kill -0 "$$" || exit
+    done &> /dev/null &
+    
+    print_success "Administrator privileges obtained"
+}
+
 # Verify we're running on macOS
 verify_macos() {
     # Check if we're on macOS
@@ -148,15 +169,16 @@ install_homebrew() {
     fi
     
     print_info "Installing Homebrew..."
-    print_info "This requires sudo access. Please enter your password when prompted."
     
-    # Download and run the official Homebrew installer
-    # Run interactively to allow sudo password prompt
-    if ! /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"; then
+    # Download and run the official Homebrew installer non-interactively
+    # Use printf to simulate ENTER keypress for the confirmation prompt
+    if ! printf "\n" | /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" &> /dev/null; then
         print_error "Homebrew installation failed"
         print_info "Please install Homebrew manually from https://brew.sh"
         exit 1
     fi
+    
+    print_success "Homebrew installed"
     
     # Determine Homebrew location based on architecture and add to current session
     local brew_path=""
@@ -1127,6 +1149,7 @@ main() {
     
     # Step 1: System verification and preparation
     verify_macos
+    ask_for_sudo  # Get sudo access upfront before any installations
     install_xcode_tools
     install_homebrew
     
